@@ -2,6 +2,7 @@ import type { PropsWithChildren } from "react";
 import { CssBaseline, GlobalStyles, ThemeProvider } from "@mui/material";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../../shared/api/query-client";
+import { AppFeedbackProvider } from "../../shared/components/feedback/app-feedback-provider";
 import { muiTheme } from "../../shared/theme/mui-theme";
 
 const globalStyles = (
@@ -32,11 +33,13 @@ const globalStyles = (
 export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={muiTheme}>
-        <CssBaseline />
-        {globalStyles}
-        {children}
-      </ThemeProvider>
+      <AppFeedbackProvider>
+        <ThemeProvider theme={muiTheme}>
+          <CssBaseline />
+          {globalStyles}
+          {children}
+        </ThemeProvider>
+      </AppFeedbackProvider>
     </QueryClientProvider>
   );
 }

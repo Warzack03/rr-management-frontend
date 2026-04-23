@@ -15,6 +15,7 @@ import { useEffect, useMemo } from "react";
 import { useLocation, useMatches, useSearchParams } from "react-router-dom";
 import { useAuthMe } from "../../modules/auth/api/auth-hooks";
 import { useActiveSeasons } from "../../modules/seasons/api/seasons-hooks";
+import type { Season } from "../types/api";
 
 type RouteHandle = {
   title?: string;
@@ -30,6 +31,9 @@ export function AppHeader() {
   const current = [...matches].reverse().find((match) => (match.handle as RouteHandle | undefined)?.title);
   const handle = (current?.handle as RouteHandle | undefined) ?? {};
   const isDashboardRoute = location.pathname.startsWith("/dashboard");
+  const isAssignmentsRoute = location.pathname.startsWith("/assignments");
+  const isSportsRoute = location.pathname.startsWith("/sports");
+  const hasSeasonContext = isDashboardRoute || isAssignmentsRoute || isSportsRoute;
   const seasonId = searchParams.get("seasonId");
 
   const currentSeason = useMemo(() => {
@@ -40,14 +44,14 @@ export function AppHeader() {
   }, [seasonsQuery.data]);
 
   useEffect(() => {
-    if (!isDashboardRoute || !currentSeason || seasonId) {
+    if (!hasSeasonContext || !currentSeason || seasonId) {
       return;
     }
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("seasonId", String(currentSeason.id));
     setSearchParams(nextParams, { replace: true });
-  }, [currentSeason, isDashboardRoute, searchParams, seasonId, setSearchParams]);
+  }, [currentSeason, hasSeasonContext, searchParams, seasonId, setSearchParams]);
 
   return (
     <AppBar position="fixed" sx={{ ml: "288px", width: "calc(100% - 288px)" }}>
@@ -67,25 +71,33 @@ export function AppHeader() {
         </Box>
 
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-          {isDashboardRoute ? (
-            <TextField
-              label="Temporada"
-              select
-              size="small"
-              sx={{ minWidth: 220 }}
-              value={seasonId ?? currentSeason?.id ?? ""}
-              onChange={(event) => {
-                const nextParams = new URLSearchParams(searchParams);
-                nextParams.set("seasonId", event.target.value);
-                setSearchParams(nextParams, { replace: true });
-              }}
-            >
-              {(seasonsQuery.data ?? []).map((season) => (
-                <MenuItem key={season.id} value={season.id}>
-                  {season.name}
-                </MenuItem>
-              ))}
-            </TextField>
+          {hasSeasonContext ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Chip
+                label={getSeasonStatusLabel((seasonsQuery.data ?? []).find((season) => String(season.id) === (seasonId ?? String(currentSeason?.id ?? "")))?.status)}
+                color={getSeasonStatusColor((seasonsQuery.data ?? []).find((season) => String(season.id) === (seasonId ?? String(currentSeason?.id ?? "")))?.status)}
+                variant="outlined"
+                sx={{ fontWeight: 700 }}
+              />
+              <TextField
+                label="Temporada"
+                select
+                size="small"
+                sx={{ minWidth: 220 }}
+                value={seasonId ?? currentSeason?.id ?? ""}
+                onChange={(event) => {
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.set("seasonId", event.target.value);
+                  setSearchParams(nextParams, { replace: true });
+                }}
+              >
+                {(seasonsQuery.data ?? []).map((season) => (
+                  <MenuItem key={season.id} value={season.id}>
+                    {season.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
           ) : (
             <Chip
               label={authQuery.data ? `${authQuery.data.username} - ${authQuery.data.role}` : "Panel interno"}
@@ -114,4 +126,30 @@ export function AppHeader() {
       </Toolbar>
     </AppBar>
   );
+}
+
+function getSeasonStatusLabel(status: Season["status"] | undefined) {
+  switch (status) {
+    case "CURRENT":
+      return "En curso";
+    case "PLANNING":
+      return "Planificacion";
+    case "CLOSED":
+      return "Cerrada";
+    default:
+      return "Sin estado";
+  }
+}
+
+function getSeasonStatusColor(status: Season["status"] | undefined): "success" | "warning" | "default" {
+  switch (status) {
+    case "CURRENT":
+      return "success";
+    case "PLANNING":
+      return "warning";
+    case "CLOSED":
+      return "default";
+    default:
+      return "default";
+  }
 }

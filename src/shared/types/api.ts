@@ -96,6 +96,7 @@ export type Season = {
   name: string;
   startDate: string;
   endDate: string;
+  status: "CURRENT" | "PLANNING" | "CLOSED";
   active: boolean;
 };
 
@@ -193,6 +194,12 @@ export type ChangeTeamPayload = {
   startDate?: string;
 };
 
+export type UpdateTeamAssignmentPayload = {
+  teamId: number;
+  seasonId?: number;
+  startDate?: string;
+};
+
 export type PlayerPosition =
   | "PORTERO"
   | "DEFENSA_CENTRAL"
@@ -238,11 +245,11 @@ export type PlayerProfile = {
 };
 
 export type UpdatePlayerProfilePayload = {
-  primaryPosition?: PlayerPosition;
-  secondaryPosition?: PlayerPosition;
-  tertiaryPosition?: PlayerPosition;
-  trainingPreference?: TrainingPreference;
-  matchPreference?: MatchPreference;
-  level?: number;
-  sportsNotes?: string;
+  primaryPosition: PlayerPosition | null;
+  secondaryPosition: PlayerPosition | null;
+  tertiaryPosition: PlayerPosition | null;
+  trainingPreference: TrainingPreference | null;
+  matchPreference: MatchPreference | null;
+  level: number | null;
+  sportsNotes: string | null;
 };

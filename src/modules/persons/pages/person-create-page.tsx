@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
+import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
 import type { DocumentStatus, PersonRoleType } from "../../../shared/types/api";
@@ -28,6 +29,7 @@ type CreatePersonFormValues = z.infer<typeof createPersonSchema>;
 
 export function PersonCreatePage() {
   const navigate = useNavigate();
+  const { showSuccess } = useAppFeedback();
   const createPersonMutation = useCreatePersonMutation();
   const form = useForm<CreatePersonFormValues>({
     resolver: zodResolver(createPersonSchema),
@@ -57,6 +59,7 @@ export function PersonCreatePage() {
       documentStatus: values.documentStatus ?? undefined
     });
 
+    showSuccess("Persona guardada correctamente.");
     navigate(`/persons/${person.id}`, { replace: true });
   });
 

@@ -19,8 +19,10 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
+import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { KpiCard } from "../../../shared/components/data-display/kpi-card";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
@@ -29,16 +31,15 @@ import type { CurrentTeamAssignment, PendingTeamAssignment } from "../../../shar
 import { useActiveSeasons } from "../../seasons/api/seasons-hooks";
 import { useActiveTeams } from "../../teams/api/teams-hooks";
 import {
-  useChangeAssignmentMutation,
   useCreateAssignmentMutation,
   useCurrentAssignments,
-  usePendingAssignments
+  usePendingAssignments,
+  useUpdateAssignmentMutation
 } from "../api/assignments-hooks";
 import { formatAssignmentDate, getAssignmentPersonName, getRoleLabel } from "../model/assignments-ui";
 
 const assignmentActionSchema = z.object({
   teamId: z.coerce.number().positive("Selecciona un equipo"),
-  seasonId: z.coerce.number().positive("Selecciona una temporada"),
   startDate: z.string().optional()
 });
 
@@ -46,23 +47,27 @@ type AssignmentActionValues = z.infer<typeof assignmentActionSchema>;
 
 type SelectedAssignmentTarget =
   | { mode: "create"; person: PendingTeamAssignment }
-  | { mode: "change"; assignment: CurrentTeamAssignment }
+  | { mode: "edit"; assignment: CurrentTeamAssignment }
   | null;
 
 export function AssignmentsPage() {
-  const currentQuery = useCurrentAssignments();
-  const pendingQuery = usePendingAssignments();
+  const { showSuccess } = useAppFeedback();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const seasonId = searchParams.get("seasonId");
+  const selectedSeasonId = seasonId ? Number(seasonId) : undefined;
+  const currentQuery = useCurrentAssignments(selectedSeasonId);
+  const pendingQuery = usePendingAssignments(selectedSeasonId);
   const teamsQuery = useActiveTeams();
   const seasonsQuery = useActiveSeasons();
   const createMutation = useCreateAssignmentMutation();
-  const changeMutation = useChangeAssignmentMutation();
+  const updateMutation = useUpdateAssignmentMutation();
   const [selectedTarget, setSelectedTarget] = useState<SelectedAssignmentTarget>(null);
   const [search, setSearch] = useState("");
+  const [currentSearch, setCurrentSearch] = useState("");
   const form = useForm<AssignmentActionValues>({
     resolver: zodResolver(assignmentActionSchema),
     defaultValues: {
       teamId: 0,
-      seasonId: 0,
       startDate: ""
     }
   });
@@ -77,12 +82,17 @@ export function AssignmentsPage() {
   const activeSeasons = seasonsQuery.data ?? [];
 
   useEffect(() => {
-    if (activeSeasons.length > 0 && !form.getValues("seasonId")) {
-      form.setValue("seasonId", activeSeasons[0].id, {
-        shouldDirty: false
-      });
+    if (activeSeasons.length > 0 && !selectedSeasonId) {
+      const today = new Date().toISOString().slice(0, 10);
+      const defaultSeason =
+        activeSeasons.find((season) => season.startDate <= today && season.endDate >= today) ?? activeSeasons[0];
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("seasonId", String(defaultSeason.id));
+      setSearchParams(nextParams, { replace: true });
+      return;
     }
-  }, [activeSeasons, form]);
+
+  }, [activeSeasons, form, searchParams, selectedSeasonId, setSearchParams]);
 
   if (isLoading) {
     return (
@@ -105,6 +115,20 @@ export function AssignmentsPage() {
     );
   }
 
+  const normalizedCurrentSearch = currentSearch.trim().toLowerCase();
+  const filteredCurrentAssignments = currentQuery.data.filter((assignment) => {
+    if (!normalizedCurrentSearch) {
+      return true;
+    }
+
+    return (
+      getAssignmentPersonName(assignment.person).toLowerCase().includes(normalizedCurrentSearch) ||
+      assignment.person.nifValue.toLowerCase().includes(normalizedCurrentSearch) ||
+      assignment.team.name.toLowerCase().includes(normalizedCurrentSearch) ||
+      assignment.team.code.toLowerCase().includes(normalizedCurrentSearch)
+    );
+  });
+
   const normalizedSearch = search.trim().toLowerCase();
   const filteredPendingAssignments = pendingQuery.data.filter((person) => {
     if (!normalizedSearch) {
@@ -120,14 +144,13 @@ export function AssignmentsPage() {
   const mutationError =
     createMutation.error instanceof HttpClientError
       ? createMutation.error.payload?.message ?? createMutation.error.message
-      : changeMutation.error instanceof HttpClientError
-        ? changeMutation.error.payload?.message ?? changeMutation.error.message
-        : createMutation.error?.message ?? changeMutation.error?.message;
+      : updateMutation.error instanceof HttpClientError
+        ? updateMutation.error.payload?.message ?? updateMutation.error.message
+        : createMutation.error?.message ?? updateMutation.error?.message;
 
-  const resetForm = (teamId = 0, seasonId = activeSeasons[0]?.id ?? 0) => {
+  const resetForm = (teamId = 0) => {
     form.reset({
       teamId,
-      seasonId,
       startDate: ""
     });
   };
@@ -135,7 +158,7 @@ export function AssignmentsPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     const payload = {
       teamId: values.teamId,
-      seasonId: values.seasonId,
+      seasonId: selectedSeasonId,
       startDate: values.startDate?.trim() || undefined
     };
 
@@ -148,11 +171,13 @@ export function AssignmentsPage() {
         personId: selectedTarget.person.personId,
         ...payload
       });
+      showSuccess("Asignacion creada correctamente.");
     } else {
-      await changeMutation.mutateAsync({
-        personId: selectedTarget.assignment.person.id,
+      await updateMutation.mutateAsync({
+        assignmentId: selectedTarget.assignment.assignmentId,
         payload
       });
+      showSuccess("Asignacion actualizada correctamente.");
     }
 
     setSelectedTarget(null);
@@ -164,24 +189,27 @@ export function AssignmentsPage() {
     resetForm();
   };
 
-  const selectChangeTarget = (assignment: CurrentTeamAssignment) => {
-    setSelectedTarget({ mode: "change", assignment });
-    resetForm(assignment.team.id, assignment.season?.id ?? activeSeasons[0]?.id ?? 0);
+  const selectEditTarget = (assignment: CurrentTeamAssignment) => {
+    setSelectedTarget({ mode: "edit", assignment });
+    form.reset({
+      teamId: assignment.team.id,
+      startDate: assignment.startDate
+    });
   };
 
   return (
-    <PageContainer
-      description="Pendientes sin equipo y cambios de equipo dentro de una misma operativa rapida."
+      <PageContainer
+      description="Pendientes sin equipo y asignaciones activas dentro de la temporada seleccionada."
       eyebrow="Operativa deportiva"
       title="Asignaciones"
     >
       <Stack spacing={3}>
         <Grid2 container spacing={2.5}>
           <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
-            <KpiCard accent="blue" helper="Asignaciones activas actuales" label="Activas" value={String(currentQuery.data.length)} />
+            <KpiCard accent="blue" helper="Asignaciones activas en la temporada" label="Activas" value={String(currentQuery.data.length)} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
-            <KpiCard accent="gold" helper="Personas pendientes de equipo" label="Pendientes" value={String(pendingQuery.data.length)} />
+            <KpiCard accent="gold" helper="Personas pendientes en la temporada" label="Pendientes" value={String(pendingQuery.data.length)} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
             <KpiCard accent="neutral" helper="Equipos disponibles para asignar" label="Equipos activos" value={String(activeTeams.length)} />
@@ -194,57 +222,73 @@ export function AssignmentsPage() {
         <Grid2 container spacing={3}>
           <Grid2 size={{ xs: 12, xl: 7.5 }}>
             <Stack spacing={3}>
-              <SectionCard subtitle="Asignaciones activas actuales" title="Actuales">
-                {currentQuery.data.length === 0 ? (
-                  <EmptyState
-                    description="No hay asignaciones activas registradas ahora mismo."
-                    title="Sin asignaciones actuales"
+              <SectionCard subtitle="Asignaciones activas de la temporada seleccionada" title="Actuales">
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchRounded sx={{ color: "text.secondary" }} />
+                        </InputAdornment>
+                      )
+                    }}
+                    label="Buscar por nombre, NIF o equipo"
+                    onChange={(event) => setCurrentSearch(event.target.value)}
+                    value={currentSearch}
                   />
-                ) : (
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Persona</TableCell>
-                        <TableCell>Equipo</TableCell>
-                        <TableCell>Inicio</TableCell>
-                        <TableCell>Temporada</TableCell>
-                        <TableCell>Accion</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {currentQuery.data.map((assignment) => (
-                        <TableRow key={assignment.assignmentId} hover>
-                          <TableCell>
-                            <Stack spacing={0.35}>
-                              <Typography fontWeight={600}>{getAssignmentPersonName(assignment.person)}</Typography>
-                              <Stack direction="row" spacing={0.75} sx={{ flexWrap: "wrap" }}>
-                                {assignment.person.roles.map((role) => (
-                                  <Chip key={role} label={getRoleLabel(role)} size="small" />
-                                ))}
-                              </Stack>
-                            </Stack>
-                          </TableCell>
-                          <TableCell>
-                            <Typography fontWeight={600}>{assignment.team.name}</Typography>
-                            <Typography color="text.secondary" variant="body2">
-                              {assignment.team.code}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{formatAssignmentDate(assignment.startDate)}</TableCell>
-                          <TableCell>{assignment.season?.name ?? "Sin temporada"}</TableCell>
-                          <TableCell>
-                            <Button onClick={() => selectChangeTarget(assignment)} size="small" variant="outlined">
-                              Cambiar equipo
-                            </Button>
-                          </TableCell>
+
+                  {filteredCurrentAssignments.length === 0 ? (
+                    <EmptyState
+                      description="No hay asignaciones activas que cumplan la busqueda actual en la temporada seleccionada."
+                      title="Sin asignaciones actuales"
+                    />
+                  ) : (
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Persona</TableCell>
+                          <TableCell>Equipo</TableCell>
+                          <TableCell>Inicio</TableCell>
+                          <TableCell>Temporada</TableCell>
+                          <TableCell>Accion</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                      </TableHead>
+                      <TableBody>
+                        {filteredCurrentAssignments.map((assignment) => (
+                          <TableRow key={assignment.assignmentId} hover>
+                            <TableCell>
+                              <Stack spacing={0.35}>
+                                <Typography fontWeight={600}>{getAssignmentPersonName(assignment.person)}</Typography>
+                                <Stack direction="row" spacing={0.75} sx={{ flexWrap: "wrap" }}>
+                                  {assignment.person.roles.map((role) => (
+                                    <Chip key={role} label={getRoleLabel(role)} size="small" />
+                                  ))}
+                                </Stack>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Typography fontWeight={600}>{assignment.team.name}</Typography>
+                              <Typography color="text.secondary" variant="body2">
+                                {assignment.team.code}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>{formatAssignmentDate(assignment.startDate)}</TableCell>
+                            <TableCell>{assignment.season?.name ?? "Sin temporada"}</TableCell>
+                            <TableCell>
+                              <Button onClick={() => selectEditTarget(assignment)} size="small" variant="outlined">
+                                Editar asignacion
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </Stack>
               </SectionCard>
 
-              <SectionCard subtitle="Personas activas sin asignacion actual" title="Pendientes">
+              <SectionCard subtitle="Personas activas sin asignacion en la temporada seleccionada" title="Pendientes">
                 <Stack spacing={2}>
                   <TextField
                     fullWidth
@@ -262,7 +306,7 @@ export function AssignmentsPage() {
 
                   {filteredPendingAssignments.length === 0 ? (
                     <EmptyState
-                      description="No hay personas pendientes que cumplan la busqueda actual."
+                      description="No hay personas pendientes que cumplan la busqueda actual en esta temporada."
                       title="Sin pendientes"
                     />
                   ) : (
@@ -309,8 +353,8 @@ export function AssignmentsPage() {
           <Grid2 size={{ xs: 12, xl: 4.5 }}>
             <SectionCard
               action={<SwapHorizRounded color="primary" />}
-              subtitle="Equipo y temporada son obligatorios. La fecha es opcional."
-              title={selectedTarget?.mode === "change" ? "Cambiar equipo" : "Asignar equipo"}
+              subtitle="El equipo es obligatorio. La temporada viene dada por el contexto seleccionado y la fecha es opcional."
+              title={selectedTarget?.mode === "edit" ? "Editar asignacion" : "Asignar equipo"}
             >
               {!selectedTarget ? (
                 <EmptyState
@@ -358,32 +402,20 @@ export function AssignmentsPage() {
                   </TextField>
 
                   <TextField
-                    error={!!form.formState.errors.seasonId}
+                    disabled
                     fullWidth
-                    helperText={form.formState.errors.seasonId?.message}
                     label="Temporada"
-                    required
-                    select
-                    value={form.watch("seasonId") || 0}
-                    onChange={(event) =>
-                      form.setValue("seasonId", Number(event.target.value), {
-                        shouldDirty: true,
-                        shouldValidate: true
-                      })
-                    }
-                  >
-                    <MenuItem value={0}>Selecciona una temporada</MenuItem>
-                    {activeSeasons.map((season) => (
-                      <MenuItem key={season.id} value={season.id}>
-                        {season.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    value={activeSeasons.find((season) => season.id === selectedSeasonId)?.name ?? "Sin temporada seleccionada"}
+                  />
 
                   <TextField
                     {...form.register("startDate")}
                     fullWidth
-                    helperText="Si no se informa, se usa la fecha actual."
+                    helperText={
+                      selectedTarget.mode === "create"
+                        ? "Si no se informa, se usa la fecha actual."
+                        : "Puedes corregir la fecha de inicio si es necesario."
+                    }
                     label="Fecha de inicio"
                     type="date"
                     InputLabelProps={{ shrink: true }}
@@ -399,8 +431,8 @@ export function AssignmentsPage() {
                     >
                       Cancelar
                     </Button>
-                    <Button disabled={createMutation.isPending || changeMutation.isPending} type="submit" variant="contained">
-                      {selectedTarget.mode === "create" ? "Crear asignacion" : "Aplicar cambio"}
+                    <Button disabled={createMutation.isPending || updateMutation.isPending} type="submit" variant="contained">
+                      {selectedTarget.mode === "create" ? "Crear asignacion" : "Guardar cambios"}
                     </Button>
                   </Stack>
                 </Stack>

@@ -1,28 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UpdatePlayerProfilePayload } from "../../../shared/types/api";
-import { dashboardKeys } from "../../dashboard/api/dashboard-hooks";
 import { getPlayerProfile, updatePlayerProfile } from "./player-profiles-api";
 
 export const playerProfileKeys = {
-  detail: (personId: string) => ["player-profile", personId] as const
+  detail: (personId: string, seasonId?: number) => ["player-profile", personId, seasonId ?? "default"] as const
 };
 
-export function usePlayerProfile(personId: string) {
+export function usePlayerProfile(personId: string, seasonId?: number) {
   return useQuery({
-    queryKey: playerProfileKeys.detail(personId),
-    queryFn: ({ signal }) => getPlayerProfile(personId, signal),
+    queryKey: playerProfileKeys.detail(personId, seasonId),
+    queryFn: ({ signal }) => getPlayerProfile(personId, seasonId, signal),
     enabled: Boolean(personId)
   });
 }
 
-export function useUpdatePlayerProfileMutation(personId: string) {
+export function useUpdatePlayerProfileMutation(personId: string, seasonId?: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdatePlayerProfilePayload) => updatePlayerProfile(personId, payload),
+    mutationFn: (payload: UpdatePlayerProfilePayload) => updatePlayerProfile(personId, payload, seasonId),
     onSuccess: (profile) => {
-      queryClient.setQueryData(playerProfileKeys.detail(personId), profile);
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.summary });
+      queryClient.setQueryData(playerProfileKeys.detail(personId, seasonId), profile);
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     }
   });

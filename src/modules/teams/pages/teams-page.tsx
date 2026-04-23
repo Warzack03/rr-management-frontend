@@ -6,20 +6,24 @@ import {
   Chip,
   CircularProgress,
   Grid2,
+  IconButton,
   MenuItem,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
+import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
@@ -36,6 +40,7 @@ const teamSchema = z.object({
 type TeamFormValues = z.infer<typeof teamSchema>;
 
 export function TeamsPage() {
+  const { showSuccess } = useAppFeedback();
   const activeTeamsQuery = useActiveTeams();
   const inactiveTeamsQuery = useInactiveTeams();
   const createTeamMutation = useCreateTeamMutation();
@@ -51,6 +56,10 @@ export function TeamsPage() {
       active: true
     }
   });
+  const codeValue = form.watch("code");
+  const nameValue = form.watch("name");
+  const displayOrderValue = form.watch("displayOrder");
+  const activeValue = form.watch("active");
 
   const activeTeams = useMemo(
     () =>
@@ -153,12 +162,33 @@ export function TeamsPage() {
         teamId: selectedTeam.id,
         payload
       });
+      showSuccess("Equipo actualizado correctamente.");
     } else {
       await createTeamMutation.mutateAsync(payload);
+      showSuccess("Equipo creado correctamente.");
     }
 
     resetForm();
   });
+
+  const toggleTeamActive = async (team: Team, nextActive: boolean) => {
+    if (nextActive) {
+      await updateTeamMutation.mutateAsync({
+        teamId: team.id,
+        payload: {
+          code: team.code,
+          name: team.name,
+          displayOrder: team.displayOrder ?? 1,
+          active: true
+        }
+      });
+      showSuccess("Equipo activado correctamente.");
+      return;
+    }
+
+    await deactivateTeamMutation.mutateAsync(team.id);
+    showSuccess("Equipo desactivado correctamente.");
+  };
 
   return (
     <PageContainer
@@ -196,19 +226,27 @@ export function TeamsPage() {
                         </TableCell>
                         <TableCell>
                           <Stack direction="row" spacing={1}>
-                            <Button onClick={() => setSelectedTeam(team)} size="small" startIcon={<EditRounded />} variant="outlined">
-                              Editar
-                            </Button>
-                            <Button
-                              color="error"
-                              disabled={deactivateTeamMutation.isPending}
-                              onClick={() => deactivateTeamMutation.mutate(team.id)}
-                              size="small"
-                              startIcon={<DeleteOutlineRounded />}
-                              variant="outlined"
-                            >
-                              Desactivar
-                            </Button>
+                            <Tooltip title="Editar equipo">
+                              <IconButton
+                                aria-label={`Editar ${team.name}`}
+                                color="primary"
+                                onClick={() => setSelectedTeam(team)}
+                                size="small"
+                              >
+                                <EditRounded fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title={team.active ? "Desactivar equipo" : "Activar equipo"}>
+                              <Switch
+                                checked={team.active}
+                                color="error"
+                                disabled={deactivateTeamMutation.isPending || updateTeamMutation.isPending}
+                                inputProps={{ "aria-label": `Cambiar estado de ${team.name}` }}
+                                onChange={(_, checked) => {
+                                  void toggleTeamActive(team, checked);
+                                }}
+                              />
+                            </Tooltip>
                           </Stack>
                         </TableCell>
                       </TableRow>
@@ -244,9 +282,29 @@ export function TeamsPage() {
                           <Chip label="Inactivo" size="small" />
                         </TableCell>
                         <TableCell>
-                          <Button onClick={() => setSelectedTeam(team)} size="small" startIcon={<EditRounded />} variant="outlined">
-                            Editar
-                          </Button>
+                          <Stack direction="row" spacing={1}>
+                            <Tooltip title="Editar equipo">
+                              <IconButton
+                                aria-label={`Editar ${team.name}`}
+                                color="primary"
+                                onClick={() => setSelectedTeam(team)}
+                                size="small"
+                              >
+                                <EditRounded fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title={team.active ? "Desactivar equipo" : "Activar equipo"}>
+                              <Switch
+                                checked={team.active}
+                                color="error"
+                                disabled={deactivateTeamMutation.isPending || updateTeamMutation.isPending}
+                                inputProps={{ "aria-label": `Cambiar estado de ${team.name}` }}
+                                onChange={(_, checked) => {
+                                  void toggleTeamActive(team, checked);
+                                }}
+                              />
+                            </Tooltip>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -263,40 +321,58 @@ export function TeamsPage() {
             subtitle="Crea un equipo nuevo o ajusta uno ya existente."
             title={selectedTeam ? "Editar equipo" : "Nuevo equipo"}
           >
-            <Stack component="form" noValidate onSubmit={onSubmit} spacing={2}>
+            <Stack autoComplete="off" component="form" noValidate onSubmit={onSubmit} spacing={2}>
               {mutationError && <Alert severity="error">{mutationError}</Alert>}
 
               <TextField
-                {...form.register("code")}
                 error={!!form.formState.errors.code}
                 fullWidth
                 helperText={form.formState.errors.code?.message}
                 label="Codigo"
                 required
+                value={codeValue}
+                onChange={(event) =>
+                  form.setValue("code", event.target.value, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  })
+                }
               />
               <TextField
-                {...form.register("name")}
                 error={!!form.formState.errors.name}
                 fullWidth
                 helperText={form.formState.errors.name?.message}
                 label="Nombre"
                 required
+                value={nameValue}
+                onChange={(event) =>
+                  form.setValue("name", event.target.value, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  })
+                }
               />
               <TextField
-                {...form.register("displayOrder", { valueAsNumber: true })}
                 error={!!form.formState.errors.displayOrder}
                 fullWidth
                 helperText={form.formState.errors.displayOrder?.message}
                 label="Orden de visualizacion"
                 required
                 type="number"
+                value={displayOrderValue}
+                onChange={(event) =>
+                  form.setValue("displayOrder", Number(event.target.value), {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  })
+                }
               />
               <TextField
                 fullWidth
                 label="Estado"
                 required
                 select
-                value={String(form.watch("active"))}
+                value={String(activeValue)}
                 onChange={(event) =>
                   form.setValue("active", event.target.value === "true", {
                     shouldDirty: true,

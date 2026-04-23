@@ -43,8 +43,8 @@ export function useAddPersonRolesMutation(personId: string) {
     mutationFn: (payload: AddPersonRolesPayload) => addPersonRoles(personId, payload),
     onSuccess: (person) => {
       queryClient.invalidateQueries({ queryKey: personsKeys.all });
-      queryClient.invalidateQueries({ queryKey: assignmentsKeys.current });
-      queryClient.invalidateQueries({ queryKey: assignmentsKeys.pending });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "current"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "pending"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: playerProfileKeys.detail(personId) });
       queryClient.setQueryData(personsKeys.detail(String(person.id)), person);
@@ -59,8 +59,8 @@ export function useUpdatePersonMutation(personId: string) {
     mutationFn: (payload: UpdatePersonPayload) => updatePerson(personId, payload),
     onSuccess: (person) => {
       queryClient.invalidateQueries({ queryKey: personsKeys.all });
-      queryClient.invalidateQueries({ queryKey: assignmentsKeys.current });
-      queryClient.invalidateQueries({ queryKey: assignmentsKeys.pending });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "current"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "pending"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: playerProfileKeys.detail(personId) });
       queryClient.setQueryData(personsKeys.detail(String(person.id)), person);

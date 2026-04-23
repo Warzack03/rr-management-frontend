@@ -18,14 +18,18 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
+import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
+import type { MatchPreference, PlayerPosition, TrainingPreference } from "../../../shared/types/api";
 import { useCurrentAssignments } from "../../assignments/api/assignments-hooks";
 import { usePersons } from "../../persons/api/persons-hooks";
 import { usePlayerProfile, useUpdatePlayerProfileMutation } from "../../player-profiles/api/player-profiles-hooks";
+import { useActiveSeasons } from "../../seasons/api/seasons-hooks";
 import {
   getMatchPreferenceLabel,
   getPositionLabel,
@@ -34,7 +38,6 @@ import {
   playerPositionOptions,
   trainingPreferenceOptions
 } from "../model/sports-ui";
-import type { MatchPreference, PlayerPosition, TrainingPreference } from "../../../shared/types/api";
 
 const sportsFormSchema = z.object({
   primaryPosition: z.enum(["PORTERO", "DEFENSA_CENTRAL", "DEFENSA_LATERAL", "CENTROCAMPISTA", "BANDA", "DELANTERO"]).nullable(),
@@ -49,8 +52,13 @@ const sportsFormSchema = z.object({
 type SportsFormValues = z.infer<typeof sportsFormSchema>;
 
 export function SportsPage() {
+  const { showSuccess } = useAppFeedback();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const seasonId = searchParams.get("seasonId");
+  const selectedSeasonId = seasonId ? Number(seasonId) : undefined;
+  const seasonsQuery = useActiveSeasons();
   const personsQuery = usePersons();
-  const assignmentsQuery = useCurrentAssignments();
+  const assignmentsQuery = useCurrentAssignments(selectedSeasonId);
   const [search, setSearch] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string>("");
   const form = useForm<SportsFormValues>({
@@ -65,6 +73,19 @@ export function SportsPage() {
       sportsNotes: ""
     }
   });
+
+  useEffect(() => {
+    const seasons = seasonsQuery.data ?? [];
+    if (seasons.length === 0 || selectedSeasonId) {
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const defaultSeason = seasons.find((season) => season.startDate <= today && season.endDate >= today) ?? seasons[0];
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("seasonId", String(defaultSeason.id));
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, seasonsQuery.data, selectedSeasonId, setSearchParams]);
 
   const sportsCandidates = useMemo(() => {
     const persons = personsQuery.data ?? [];
@@ -90,8 +111,8 @@ export function SportsPage() {
     }
   }, [selectedPersonId, sportsCandidates]);
 
-  const selectedProfileQuery = usePlayerProfile(selectedPersonId);
-  const updateMutation = useUpdatePlayerProfileMutation(selectedPersonId);
+  const selectedProfileQuery = usePlayerProfile(selectedPersonId, selectedSeasonId);
+  const updateMutation = useUpdatePlayerProfileMutation(selectedPersonId, selectedSeasonId);
 
   useEffect(() => {
     if (!selectedProfileQuery.data) {
@@ -115,16 +136,18 @@ export function SportsPage() {
       return true;
     }
 
-    return `${person.firstName} ${person.lastName}`.toLowerCase().includes(normalizedSearch)
-      || person.nifValue.toLowerCase().includes(normalizedSearch);
+    return (
+      `${person.firstName} ${person.lastName}`.toLowerCase().includes(normalizedSearch) ||
+      person.nifValue.toLowerCase().includes(normalizedSearch)
+    );
   });
 
-  const loadingBase = personsQuery.isLoading || assignmentsQuery.isLoading;
-  const errorBase = personsQuery.isError || assignmentsQuery.isError;
+  const loadingBase = personsQuery.isLoading || assignmentsQuery.isLoading || seasonsQuery.isLoading;
+  const errorBase = personsQuery.isError || assignmentsQuery.isError || seasonsQuery.isError;
 
   if (loadingBase) {
     return (
-      <PageContainer eyebrow="Datos permanentes" title="Gestion deportiva">
+      <PageContainer eyebrow="Operativa por temporada" title="Gestion deportiva">
         <Stack
           sx={{
             minHeight: 320,
@@ -138,11 +161,11 @@ export function SportsPage() {
     );
   }
 
-  if (errorBase || !personsQuery.data || !assignmentsQuery.data) {
+  if (errorBase || !personsQuery.data || !assignmentsQuery.data || !seasonsQuery.data) {
     return (
-      <PageContainer eyebrow="Datos permanentes" title="Gestion deportiva">
+      <PageContainer eyebrow="Operativa por temporada" title="Gestion deportiva">
         <EmptyState
-          description="No hemos podido cargar personas o asignaciones actuales para armar la mesa deportiva."
+          description="No hemos podido cargar personas, asignaciones o temporadas para armar la mesa deportiva."
           title="Modulo deportivo no disponible"
         />
       </PageContainer>
@@ -162,20 +185,22 @@ export function SportsPage() {
     }
 
     await updateMutation.mutateAsync({
-      primaryPosition: values.primaryPosition ?? undefined,
-      secondaryPosition: values.secondaryPosition ?? undefined,
-      tertiaryPosition: values.tertiaryPosition ?? undefined,
-      trainingPreference: values.trainingPreference ?? undefined,
-      matchPreference: values.matchPreference ?? undefined,
-      level: values.level ?? undefined,
-      sportsNotes: values.sportsNotes?.trim() || undefined
+      primaryPosition: values.primaryPosition,
+      secondaryPosition: values.secondaryPosition,
+      tertiaryPosition: values.tertiaryPosition,
+      trainingPreference: values.trainingPreference,
+      matchPreference: values.matchPreference,
+      level: values.level,
+      sportsNotes: values.sportsNotes?.trim() ? values.sportsNotes.trim() : null
     });
+
+    showSuccess("Perfil deportivo guardado correctamente.");
   });
 
   return (
     <PageContainer
-      description="Mesa de trabajo para editar el perfil deportivo de jugadores ya dados de alta en el maestro."
-      eyebrow="Datos permanentes"
+      description="Mesa de trabajo para editar el perfil deportivo de jugadores en la temporada seleccionada."
+      eyebrow="Operativa por temporada"
       title="Gestion deportiva"
     >
       <Grid2 container spacing={3}>
@@ -218,7 +243,7 @@ export function SportsPage() {
                               {person.nifValue}
                             </Typography>
                             <Typography color="text.secondary" variant="body2">
-                              {person.currentTeam ? `${person.currentTeam.name} · ${person.currentTeam.code}` : "Sin equipo actual"}
+                              {person.currentTeam ? `${person.currentTeam.name} - ${person.currentTeam.code}` : "Sin equipo en la temporada"}
                             </Typography>
                           </Stack>
                         }
@@ -252,18 +277,28 @@ export function SportsPage() {
             </SectionCard>
           ) : selectedProfileQuery.isError || !selectedProfileQuery.data || !selectedCandidate ? (
             <EmptyState
-              description="No hemos podido cargar el perfil seleccionado. Revisa si la persona sigue siendo jugador y tiene perfil deportivo."
+              description="No hemos podido cargar el perfil seleccionado para la temporada activa en pantalla."
               title="Perfil no disponible"
             />
           ) : (
             <Stack component="form" noValidate onSubmit={onSubmit} spacing={3}>
               {updateError && <Alert severity="error">{updateError}</Alert>}
 
-              <SectionCard subtitle="Resumen actual de la ficha deportiva" title={`${selectedProfileQuery.data.person.firstName} ${selectedProfileQuery.data.person.lastName}`}>
+              <SectionCard
+                subtitle="Resumen actual de la ficha deportiva en la temporada seleccionada"
+                title={`${selectedProfileQuery.data.person.firstName} ${selectedProfileQuery.data.person.lastName}`}
+              >
                 <Stack spacing={1.5}>
                   <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                    <Chip color="primary" icon={<SportsSoccerRounded />} label={selectedProfileQuery.data.currentTeam?.name ?? "Sin equipo actual"} />
-                    <Chip label={selectedProfileQuery.data.incomplete ? "Perfil incompleto" : "Perfil completo"} variant={selectedProfileQuery.data.incomplete ? "filled" : "outlined"} />
+                    <Chip
+                      color="primary"
+                      icon={<SportsSoccerRounded />}
+                      label={selectedProfileQuery.data.currentTeam?.name ?? "Sin equipo en la temporada"}
+                    />
+                    <Chip
+                      label={selectedProfileQuery.data.incomplete ? "Perfil incompleto" : "Perfil completo"}
+                      variant={selectedProfileQuery.data.incomplete ? "filled" : "outlined"}
+                    />
                   </Stack>
                   <Grid2 container spacing={2}>
                     <Grid2 size={{ xs: 12, md: 4 }}>

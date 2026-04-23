@@ -1,31 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ChangeTeamPayload, CreateTeamAssignmentPayload } from "../../../shared/types/api";
-import { dashboardKeys } from "../../dashboard/api/dashboard-hooks";
-import { createAssignment, changeAssignment, getCurrentAssignments, getPendingAssignments } from "./assignments-api";
+import type { ChangeTeamPayload, CreateTeamAssignmentPayload, UpdateTeamAssignmentPayload } from "../../../shared/types/api";
+import {
+  createAssignment,
+  changeAssignment,
+  getCurrentAssignmentsBySeason,
+  getPendingAssignmentsBySeason,
+  updateAssignment
+} from "./assignments-api";
 
 export const assignmentsKeys = {
-  current: ["assignments", "current"] as const,
-  pending: ["assignments", "pending"] as const
+  current: (seasonId?: number) => ["assignments", "current", seasonId ?? "default"] as const,
+  pending: (seasonId?: number) => ["assignments", "pending", seasonId ?? "default"] as const
 };
 
-export function useCurrentAssignments() {
+export function useCurrentAssignments(seasonId?: number) {
   return useQuery({
-    queryKey: assignmentsKeys.current,
-    queryFn: ({ signal }) => getCurrentAssignments(signal)
+    queryKey: assignmentsKeys.current(seasonId),
+    queryFn: ({ signal }) => getCurrentAssignmentsBySeason(seasonId, signal)
   });
 }
 
-export function usePendingAssignments() {
+export function usePendingAssignments(seasonId?: number) {
   return useQuery({
-    queryKey: assignmentsKeys.pending,
-    queryFn: ({ signal }) => getPendingAssignments(signal)
+    queryKey: assignmentsKeys.pending(seasonId),
+    queryFn: ({ signal }) => getPendingAssignmentsBySeason(seasonId, signal)
   });
 }
 
 function invalidateAssignmentViews(queryClient: ReturnType<typeof useQueryClient>) {
-  queryClient.invalidateQueries({ queryKey: assignmentsKeys.current });
-  queryClient.invalidateQueries({ queryKey: assignmentsKeys.pending });
-  queryClient.invalidateQueries({ queryKey: dashboardKeys.summary });
+  queryClient.invalidateQueries({ queryKey: ["assignments", "current"] });
+  queryClient.invalidateQueries({ queryKey: ["assignments", "pending"] });
   queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 }
 
@@ -45,6 +49,18 @@ export function useChangeAssignmentMutation() {
 
   return useMutation({
     mutationFn: ({ personId, payload }: { personId: number; payload: ChangeTeamPayload }) => changeAssignment(personId, payload),
+    onSuccess: () => {
+      invalidateAssignmentViews(queryClient);
+    }
+  });
+}
+
+export function useUpdateAssignmentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ assignmentId, payload }: { assignmentId: number; payload: UpdateTeamAssignmentPayload }) =>
+      updateAssignment(assignmentId, payload),
     onSuccess: () => {
       invalidateAssignmentViews(queryClient);
     }
