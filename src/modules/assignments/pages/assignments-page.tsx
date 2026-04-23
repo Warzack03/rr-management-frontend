@@ -8,6 +8,7 @@ import {
   Grid2,
   InputAdornment,
   MenuItem,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
 import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
@@ -27,8 +28,9 @@ import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { KpiCard } from "../../../shared/components/data-display/kpi-card";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
+import type { Season } from "../../../shared/types/api";
 import type { CurrentTeamAssignment, PendingTeamAssignment } from "../../../shared/types/api";
-import { useActiveSeasons } from "../../seasons/api/seasons-hooks";
+import { useSeasons } from "../../seasons/api/seasons-hooks";
 import { useActiveTeams } from "../../teams/api/teams-hooks";
 import {
   useCreateAssignmentMutation,
@@ -50,6 +52,17 @@ type SelectedAssignmentTarget =
   | { mode: "edit"; assignment: CurrentTeamAssignment }
   | null;
 
+const PAGE_SIZE = 10;
+
+function resolveDefaultSeason(seasons: Season[]) {
+  return (
+    seasons.find((season) => season.status === "CURRENT") ??
+    seasons.find((season) => season.status === "PLANNING") ??
+    seasons[0] ??
+    null
+  );
+}
+
 export function AssignmentsPage() {
   const { showSuccess } = useAppFeedback();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -58,12 +71,14 @@ export function AssignmentsPage() {
   const currentQuery = useCurrentAssignments(selectedSeasonId);
   const pendingQuery = usePendingAssignments(selectedSeasonId);
   const teamsQuery = useActiveTeams();
-  const seasonsQuery = useActiveSeasons();
+  const seasonsQuery = useSeasons();
   const createMutation = useCreateAssignmentMutation();
   const updateMutation = useUpdateAssignmentMutation();
   const [selectedTarget, setSelectedTarget] = useState<SelectedAssignmentTarget>(null);
   const [search, setSearch] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pendingPage, setPendingPage] = useState(1);
   const form = useForm<AssignmentActionValues>({
     resolver: zodResolver(assignmentActionSchema),
     defaultValues: {
@@ -83,9 +98,10 @@ export function AssignmentsPage() {
 
   useEffect(() => {
     if (activeSeasons.length > 0 && !selectedSeasonId) {
-      const today = new Date().toISOString().slice(0, 10);
-      const defaultSeason =
-        activeSeasons.find((season) => season.startDate <= today && season.endDate >= today) ?? activeSeasons[0];
+      const defaultSeason = resolveDefaultSeason(activeSeasons);
+      if (!defaultSeason) {
+        return;
+      }
       const nextParams = new URLSearchParams(searchParams);
       nextParams.set("seasonId", String(defaultSeason.id));
       setSearchParams(nextParams, { replace: true });
@@ -93,6 +109,11 @@ export function AssignmentsPage() {
     }
 
   }, [activeSeasons, form, searchParams, selectedSeasonId, setSearchParams]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setPendingPage(1);
+  }, [selectedSeasonId]);
 
   if (isLoading) {
     return (
@@ -128,6 +149,8 @@ export function AssignmentsPage() {
       assignment.team.code.toLowerCase().includes(normalizedCurrentSearch)
     );
   });
+  const currentPageCount = Math.max(1, Math.ceil(filteredCurrentAssignments.length / PAGE_SIZE));
+  const paginatedCurrentAssignments = filteredCurrentAssignments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredPendingAssignments = pendingQuery.data.filter((person) => {
@@ -140,6 +163,8 @@ export function AssignmentsPage() {
       person.nifValue.toLowerCase().includes(normalizedSearch)
     );
   });
+  const pendingPageCount = Math.max(1, Math.ceil(filteredPendingAssignments.length / PAGE_SIZE));
+  const paginatedPendingAssignments = filteredPendingAssignments.slice((pendingPage - 1) * PAGE_SIZE, pendingPage * PAGE_SIZE);
 
   const mutationError =
     createMutation.error instanceof HttpClientError
@@ -212,10 +237,14 @@ export function AssignmentsPage() {
             <KpiCard accent="gold" helper="Personas pendientes en la temporada" label="Pendientes" value={String(pendingQuery.data.length)} />
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
-            <KpiCard accent="neutral" helper="Equipos disponibles para asignar" label="Equipos activos" value={String(activeTeams.length)} />
+            <Stack component={Link} sx={{ color: "inherit", display: "block", textDecoration: "none" }} to="/teams">
+              <KpiCard accent="neutral" helper="Equipos disponibles para asignar" label="Equipos activos" value={String(activeTeams.length)} />
+            </Stack>
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
-            <KpiCard accent="neutral" helper="Temporadas activas para operar" label="Temporadas" value={String(activeSeasons.length)} />
+            <Stack component={Link} sx={{ color: "inherit", display: "block", textDecoration: "none" }} to="/seasons">
+              <KpiCard accent="neutral" helper="Temporadas disponibles para operar" label="Temporadas" value={String(activeSeasons.length)} />
+            </Stack>
           </Grid2>
         </Grid2>
 
@@ -234,7 +263,10 @@ export function AssignmentsPage() {
                       )
                     }}
                     label="Buscar por nombre, NIF o equipo"
-                    onChange={(event) => setCurrentSearch(event.target.value)}
+                    onChange={(event) => {
+                      setCurrentSearch(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     value={currentSearch}
                   />
 
@@ -255,7 +287,7 @@ export function AssignmentsPage() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {filteredCurrentAssignments.map((assignment) => (
+                        {paginatedCurrentAssignments.map((assignment) => (
                           <TableRow key={assignment.assignmentId} hover>
                             <TableCell>
                               <Stack spacing={0.35}>
@@ -269,9 +301,6 @@ export function AssignmentsPage() {
                             </TableCell>
                             <TableCell>
                               <Typography fontWeight={600}>{assignment.team.name}</Typography>
-                              <Typography color="text.secondary" variant="body2">
-                                {assignment.team.code}
-                              </Typography>
                             </TableCell>
                             <TableCell>{formatAssignmentDate(assignment.startDate)}</TableCell>
                             <TableCell>{assignment.season?.name ?? "Sin temporada"}</TableCell>
@@ -284,6 +313,12 @@ export function AssignmentsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                  )}
+
+                  {filteredCurrentAssignments.length > 0 && (
+                    <Stack sx={{ alignItems: "center" }}>
+                      <Pagination count={currentPageCount} onChange={(_event, value) => setCurrentPage(value)} page={currentPage} />
+                    </Stack>
                   )}
                 </Stack>
               </SectionCard>
@@ -300,7 +335,10 @@ export function AssignmentsPage() {
                       )
                     }}
                     label="Buscar por nombre o NIF"
-                    onChange={(event) => setSearch(event.target.value)}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setPendingPage(1);
+                    }}
                     value={search}
                   />
 
@@ -320,7 +358,7 @@ export function AssignmentsPage() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {filteredPendingAssignments.map((person) => (
+                        {paginatedPendingAssignments.map((person) => (
                           <TableRow key={person.personId} hover>
                             <TableCell>
                               <Typography fontWeight={600}>
@@ -344,6 +382,12 @@ export function AssignmentsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                  )}
+
+                  {filteredPendingAssignments.length > 0 && (
+                    <Stack sx={{ alignItems: "center" }}>
+                      <Pagination count={pendingPageCount} onChange={(_event, value) => setPendingPage(value)} page={pendingPage} />
+                    </Stack>
                   )}
                 </Stack>
               </SectionCard>
@@ -396,7 +440,7 @@ export function AssignmentsPage() {
                     <MenuItem value={0}>Selecciona un equipo</MenuItem>
                     {activeTeams.map((team) => (
                       <MenuItem key={team.id} value={team.id}>
-                        {team.name} - {team.code}
+                        {team.name}
                       </MenuItem>
                     ))}
                   </TextField>

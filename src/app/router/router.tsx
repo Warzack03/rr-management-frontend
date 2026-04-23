@@ -8,6 +8,7 @@ import { TeamDashboardPage } from "../../modules/dashboard/pages/team-dashboard-
 import { PersonCreatePage } from "../../modules/persons/pages/person-create-page";
 import { PersonDetailPage } from "../../modules/persons/pages/person-detail-page";
 import { PersonsPage } from "../../modules/persons/pages/persons-page";
+import { SeasonsPage } from "../../modules/seasons/pages/seasons-page";
 import { SportsPage } from "../../modules/sports/pages/sports-page";
 import { TeamsPage } from "../../modules/teams/pages/teams-page";
 
@@ -80,6 +81,14 @@ export const router = createBrowserRouter([
             handle: {
               title: "Equipos",
               subtitle: "Alta, edicion y baja logica de equipos"
+            }
+          },
+          {
+            path: "seasons",
+            element: <SeasonsPage />,
+            handle: {
+              title: "Temporadas",
+              subtitle: "Ciclo de campañas y copia modular entre temporadas"
             }
           },
           {

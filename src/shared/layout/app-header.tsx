@@ -14,7 +14,7 @@ import {
 import { useEffect, useMemo } from "react";
 import { useLocation, useMatches, useSearchParams } from "react-router-dom";
 import { useAuthMe } from "../../modules/auth/api/auth-hooks";
-import { useActiveSeasons } from "../../modules/seasons/api/seasons-hooks";
+import { useSeasons } from "../../modules/seasons/api/seasons-hooks";
 import type { Season } from "../types/api";
 
 type RouteHandle = {
@@ -26,7 +26,7 @@ export function AppHeader() {
   const matches = useMatches();
   const location = useLocation();
   const authQuery = useAuthMe();
-  const seasonsQuery = useActiveSeasons();
+  const seasonsQuery = useSeasons();
   const [searchParams, setSearchParams] = useSearchParams();
   const current = [...matches].reverse().find((match) => (match.handle as RouteHandle | undefined)?.title);
   const handle = (current?.handle as RouteHandle | undefined) ?? {};
@@ -38,10 +38,19 @@ export function AppHeader() {
 
   const currentSeason = useMemo(() => {
     const seasons = seasonsQuery.data ?? [];
-    const today = new Date().toISOString().slice(0, 10);
 
-    return seasons.find((season) => season.startDate <= today && season.endDate >= today) ?? seasons[0] ?? null;
+    return (
+      seasons.find((season: Season) => season.status === "CURRENT") ??
+      seasons.find((season: Season) => season.status === "PLANNING") ??
+      seasons[0] ??
+      null
+    );
   }, [seasonsQuery.data]);
+
+  const selectedSeason = useMemo(
+    () => (seasonsQuery.data ?? []).find((season: Season) => String(season.id) === (seasonId ?? String(currentSeason?.id ?? ""))) ?? currentSeason,
+    [currentSeason, seasonId, seasonsQuery.data]
+  );
 
   useEffect(() => {
     if (!hasSeasonContext || !currentSeason || seasonId) {
@@ -74,8 +83,8 @@ export function AppHeader() {
           {hasSeasonContext ? (
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <Chip
-                label={getSeasonStatusLabel((seasonsQuery.data ?? []).find((season) => String(season.id) === (seasonId ?? String(currentSeason?.id ?? "")))?.status)}
-                color={getSeasonStatusColor((seasonsQuery.data ?? []).find((season) => String(season.id) === (seasonId ?? String(currentSeason?.id ?? "")))?.status)}
+                label={getSeasonStatusLabel(selectedSeason?.status)}
+                color={getSeasonStatusColor(selectedSeason?.status)}
                 variant="outlined"
                 sx={{ fontWeight: 700 }}
               />
@@ -91,7 +100,7 @@ export function AppHeader() {
                   setSearchParams(nextParams, { replace: true });
                 }}
               >
-                {(seasonsQuery.data ?? []).map((season) => (
+                {(seasonsQuery.data ?? []).map((season: Season) => (
                   <MenuItem key={season.id} value={season.id}>
                     {season.name}
                   </MenuItem>

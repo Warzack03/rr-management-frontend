@@ -1,11 +1,13 @@
 import { KeyboardBackspaceRounded, NotesRounded, ScheduleRounded, SportsSoccerRounded } from "@mui/icons-material";
-import { Button, Chip, CircularProgress, Grid2, Stack } from "@mui/material";
+import { Avatar, Button, Chip, CircularProgress, Grid2, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { KpiCard } from "../../../shared/components/data-display/kpi-card";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
 import { formatMetricValue } from "../../../shared/utils/format-metric-value";
+import { getPositionLabel } from "../../sports/model/sports-ui";
+import { getTeamBranchLabel, getTeamCrestSrc } from "../../teams/model/teams-ui";
 import { useDashboardTeam } from "../api/dashboard-hooks";
 import { PositionSummaryChart } from "../components/position-summary-chart";
 
@@ -47,13 +49,21 @@ export function TeamDashboardPage() {
         </Button>
       }
       description="Vista compacta de un equipo concreto para leer rapido su salud operativa y la distribucion de la plantilla."
-      eyebrow={dashboard.team.code}
+      eyebrow={`${dashboard.team.code} · ${getTeamBranchLabel(dashboard.team.branch)}`}
       title={dashboard.team.name}
     >
       <Stack spacing={3.5}>
-        <Stack direction="row" spacing={1.25}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+          <Avatar
+            src={getTeamCrestSrc(dashboard.team.branch)}
+            sx={{
+              width: 44,
+              height: 44,
+              bgcolor: "rgba(58, 104, 168, 0.1)"
+            }}
+          />
           <Chip color="primary" label={dashboard.team.active ? "Equipo activo" : "Equipo inactivo"} />
-          <Chip label={`Codigo interno: ${dashboard.team.code}`} variant="outlined" />
+          <Chip label={`Sede: ${getTeamBranchLabel(dashboard.team.branch)}`} variant="outlined" />
         </Stack>
 
         <Grid2 container spacing={2.5}>
@@ -115,6 +125,38 @@ export function TeamDashboardPage() {
             </SectionCard>
           </Grid2>
         </Grid2>
+
+        <SectionCard subtitle="Listado base de jugadores activos del equipo en la temporada seleccionada" title="Plantilla activa">
+          {dashboard.players.length === 0 ? (
+            <EmptyState
+              description="No hay jugadores activos asignados a este equipo en la temporada seleccionada."
+              title="Sin jugadores activos"
+            />
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nombre completo</TableCell>
+                  <TableCell align="right">Nivel</TableCell>
+                  <TableCell>Posicion primaria</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {dashboard.players.map((player) => (
+                  <TableRow key={player.personId} hover>
+                    <TableCell>
+                      <Typography component={Link} sx={{ color: "primary.main", fontWeight: 600, textDecoration: "none" }} to={`/persons/${player.personId}`}>
+                        {player.fullName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">{player.level ?? "--"}</TableCell>
+                    <TableCell>{getPositionLabel(player.primaryPosition)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </SectionCard>
       </Stack>
     </PageContainer>
   );

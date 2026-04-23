@@ -12,6 +12,7 @@ import {
   ListItemButton,
   ListItemText,
   MenuItem,
+  Pagination,
   Stack,
   TextField,
   Typography
@@ -25,11 +26,11 @@ import { useAppFeedback } from "../../../shared/components/feedback/app-feedback
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
-import type { MatchPreference, PlayerPosition, TrainingPreference } from "../../../shared/types/api";
+import type { MatchPreference, PlayerPosition, Season, TrainingPreference } from "../../../shared/types/api";
 import { useCurrentAssignments } from "../../assignments/api/assignments-hooks";
 import { usePersons } from "../../persons/api/persons-hooks";
 import { usePlayerProfile, useUpdatePlayerProfileMutation } from "../../player-profiles/api/player-profiles-hooks";
-import { useActiveSeasons } from "../../seasons/api/seasons-hooks";
+import { useSeasons } from "../../seasons/api/seasons-hooks";
 import {
   getMatchPreferenceLabel,
   getPositionLabel,
@@ -38,6 +39,17 @@ import {
   playerPositionOptions,
   trainingPreferenceOptions
 } from "../model/sports-ui";
+
+const PAGE_SIZE = 10;
+
+function resolveDefaultSeason(seasons: Season[]) {
+  return (
+    seasons.find((season) => season.status === "CURRENT") ??
+    seasons.find((season) => season.status === "PLANNING") ??
+    seasons[0] ??
+    null
+  );
+}
 
 const sportsFormSchema = z.object({
   primaryPosition: z.enum(["PORTERO", "DEFENSA_CENTRAL", "DEFENSA_LATERAL", "CENTROCAMPISTA", "BANDA", "DELANTERO"]).nullable(),
@@ -56,11 +68,12 @@ export function SportsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const seasonId = searchParams.get("seasonId");
   const selectedSeasonId = seasonId ? Number(seasonId) : undefined;
-  const seasonsQuery = useActiveSeasons();
+  const seasonsQuery = useSeasons();
   const personsQuery = usePersons();
   const assignmentsQuery = useCurrentAssignments(selectedSeasonId);
   const [search, setSearch] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string>("");
+  const [page, setPage] = useState(1);
   const form = useForm<SportsFormValues>({
     resolver: zodResolver(sportsFormSchema),
     defaultValues: {
@@ -80,8 +93,10 @@ export function SportsPage() {
       return;
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const defaultSeason = seasons.find((season) => season.startDate <= today && season.endDate >= today) ?? seasons[0];
+    const defaultSeason = resolveDefaultSeason(seasons);
+    if (!defaultSeason) {
+      return;
+    }
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("seasonId", String(defaultSeason.id));
     setSearchParams(nextParams, { replace: true });
@@ -141,6 +156,12 @@ export function SportsPage() {
       person.nifValue.toLowerCase().includes(normalizedSearch)
     );
   });
+  const pageCount = Math.max(1, Math.ceil(filteredCandidates.length / PAGE_SIZE));
+  const paginatedCandidates = filteredCandidates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedSeasonId]);
 
   const loadingBase = personsQuery.isLoading || assignmentsQuery.isLoading || seasonsQuery.isLoading;
   const errorBase = personsQuery.isError || assignmentsQuery.isError || seasonsQuery.isError;
@@ -228,7 +249,7 @@ export function SportsPage() {
                 />
               ) : (
                 <List disablePadding sx={{ display: "grid", gap: 1 }}>
-                  {filteredCandidates.map((person) => (
+                  {paginatedCandidates.map((person) => (
                     <ListItemButton
                       key={person.id}
                       onClick={() => setSelectedPersonId(String(person.id))}
@@ -243,7 +264,7 @@ export function SportsPage() {
                               {person.nifValue}
                             </Typography>
                             <Typography color="text.secondary" variant="body2">
-                              {person.currentTeam ? `${person.currentTeam.name} - ${person.currentTeam.code}` : "Sin equipo en la temporada"}
+                              {person.currentTeam ? person.currentTeam.name : "Sin equipo en la temporada"}
                             </Typography>
                           </Stack>
                         }
@@ -252,6 +273,12 @@ export function SportsPage() {
                     </ListItemButton>
                   ))}
                 </List>
+              )}
+
+              {filteredCandidates.length > 0 && (
+                <Stack sx={{ alignItems: "center" }}>
+                  <Pagination count={pageCount} onChange={(_event, value) => setPage(value)} page={page} />
+                </Stack>
               )}
             </Stack>
           </SectionCard>

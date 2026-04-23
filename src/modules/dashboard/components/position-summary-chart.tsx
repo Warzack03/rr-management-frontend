@@ -12,6 +12,10 @@ type PositionSummaryChartProps = {
 
 const COLORS = ["#3A68A8", "#4F7EC0", "#6A96D1", "#85ADD9", "#D6B84B", "#EDCB50"];
 
+function formatPositionLabel(value: string) {
+  return value.replace(/_/g, " ");
+}
+
 export function PositionSummaryChart({ data }: PositionSummaryChartProps) {
   return (
     <Box sx={{ width: "100%", height: 320 }}>
@@ -26,9 +30,12 @@ export function PositionSummaryChart({ data }: PositionSummaryChartProps) {
             tickLine={false}
             axisLine={false}
             style={{ fontSize: 12 }}
+            tickFormatter={formatPositionLabel}
           />
           <Tooltip
             cursor={{ fill: "rgba(58, 104, 168, 0.06)" }}
+            formatter={(value) => [value, "Jugadores activos"]}
+            labelFormatter={(label) => formatPositionLabel(String(label))}
             contentStyle={{
               borderRadius: 16,
               border: "1px solid #D8E0EA",

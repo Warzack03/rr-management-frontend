@@ -75,20 +75,22 @@ export type Team = {
   name: string;
   active: boolean;
   displayOrder: number | null;
+  branch: "MAD" | "CAT";
+  hasActivePlayersInCurrentSeason: boolean;
 };
 
 export type CreateTeamPayload = {
-  code: string;
   name: string;
   displayOrder: number;
   active: boolean;
+  branch: "MAD" | "CAT";
 };
 
 export type UpdateTeamPayload = {
-  code: string;
   name: string;
   displayOrder: number;
   active: boolean;
+  branch: "MAD" | "CAT";
 };
 
 export type Season = {
@@ -97,7 +99,22 @@ export type Season = {
   startDate: string;
   endDate: string;
   status: "CURRENT" | "PLANNING" | "CLOSED";
-  active: boolean;
+};
+
+export type CreateSeasonPayload = {
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: "CURRENT" | "PLANNING" | "CLOSED";
+};
+
+export type UpdateSeasonPayload = CreateSeasonPayload;
+
+export type SeasonCopyModule = "ASSIGNMENTS" | "PLAYER_PROFILES";
+
+export type CopySeasonModulesPayload = {
+  sourceSeasonId: number;
+  modules: SeasonCopyModule[];
 };
 
 export type DashboardTeamSummary = {
@@ -105,6 +122,7 @@ export type DashboardTeamSummary = {
   teamCode: string;
   teamName: string;
   activePlayers: number;
+  averageLevel: number | null;
 };
 
 export type DashboardPositionSummary = {
@@ -130,6 +148,14 @@ export type DashboardTeamInfo = {
   code: string;
   name: string;
   active: boolean;
+  branch: "MAD" | "CAT";
+};
+
+export type DashboardTeamPlayerSummary = {
+  personId: number;
+  fullName: string;
+  level: number | null;
+  primaryPosition: PlayerPosition | null;
 };
 
 export type DashboardTeamView = {
@@ -140,6 +166,7 @@ export type DashboardTeamView = {
   activePlayersWithoutMatchPreference: number;
   playersWithObservations: number;
   positionSummary: DashboardPositionSummary[];
+  players: DashboardTeamPlayerSummary[];
 };
 
 export type CurrentTeamAssignmentPerson = {
@@ -160,7 +187,6 @@ export type CurrentTeamAssignmentTeam = {
 export type CurrentTeamAssignmentSeason = {
   id: number;
   name: string;
-  active: boolean;
 } | null;
 
 export type CurrentTeamAssignment = {

@@ -7,10 +7,10 @@ export const dashboardSummary = {
   activePlayersWithoutMatchPreference: 4,
   playersWithObservations: 9,
   teamSummary: [
-    { teamId: 1, code: "SENIOR_A", name: "Senior A", activePlayers: 14 },
-    { teamId: 2, code: "SENIOR_B", name: "Senior B", activePlayers: 12 },
-    { teamId: 3, code: "SENIOR_C", name: "Senior C", activePlayers: 10 },
-    { teamId: 4, code: "SENIOR_D", name: "Senior D", activePlayers: 10 }
+    { teamId: 1, teamCode: "SENIOR_A", teamName: "Senior A", activePlayers: 14, averageLevel: 7.2 },
+    { teamId: 2, teamCode: "SENIOR_B", teamName: "Senior B", activePlayers: 12, averageLevel: 6.4 },
+    { teamId: 3, teamCode: "SENIOR_C", teamName: "Senior C", activePlayers: 10, averageLevel: 6.1 },
+    { teamId: 4, teamCode: "SENIOR_D", teamName: "Senior D", activePlayers: 10, averageLevel: 5.9 }
   ],
   positionSummary: [
     { position: "PORTERO", activePlayers: 4 },
@@ -32,7 +32,7 @@ export const dashboardSummary = {
 
 export const teamDashboardMap = {
   "1": {
-    team: { id: 1, code: "SENIOR_A", name: "Senior A", active: true },
+    team: { id: 1, code: "SENIOR_A", name: "Senior A", active: true, branch: "MAD" },
     activePlayers: 14,
     averageLevel: 7.2,
     activePlayersWithoutTrainingPreference: 2,
@@ -45,10 +45,14 @@ export const teamDashboardMap = {
       { position: "CENTROCAMPISTA", activePlayers: 3 },
       { position: "BANDA", activePlayers: 2 },
       { position: "DELANTERO", activePlayers: 3 }
+    ],
+    players: [
+      { personId: 11, fullName: "Aitor Lopez", level: 8, primaryPosition: "DEFENSA_CENTRAL" },
+      { personId: 12, fullName: "Unai Sanz", level: 7, primaryPosition: "CENTROCAMPISTA" }
     ]
   },
   "2": {
-    team: { id: 2, code: "SENIOR_B", name: "Senior B", active: true },
+    team: { id: 2, code: "SENIOR_B", name: "Senior B", active: true, branch: "CAT" },
     activePlayers: 12,
     averageLevel: 6.4,
     activePlayersWithoutTrainingPreference: 3,
@@ -61,6 +65,10 @@ export const teamDashboardMap = {
       { position: "CENTROCAMPISTA", activePlayers: 3 },
       { position: "BANDA", activePlayers: 2 },
       { position: "DELANTERO", activePlayers: 2 }
+    ],
+    players: [
+      { personId: 21, fullName: "Marc Serra", level: 7, primaryPosition: "BANDA" },
+      { personId: 22, fullName: "Nil Casas", level: 6, primaryPosition: "DELANTERO" }
     ]
   }
 } as const;

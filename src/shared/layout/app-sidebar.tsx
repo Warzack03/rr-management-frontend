@@ -1,5 +1,6 @@
 import {
   AutoGraphRounded,
+  CalendarMonthRounded,
   FlagRounded,
   GroupsRounded,
   LogoutRounded,
@@ -41,6 +42,11 @@ const navItems = [
     label: "Equipos",
     path: "/teams",
     icon: <FlagRounded />
+  },
+  {
+    label: "Temporadas",
+    path: "/seasons",
+    icon: <CalendarMonthRounded />
   },
   {
     label: "Gestion deportiva",

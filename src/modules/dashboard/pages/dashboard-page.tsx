@@ -1,13 +1,6 @@
-import {
-  AutoGraphRounded,
-  GroupsRounded,
-  InfoOutlined,
-  SportsScoreRounded,
-  WarningAmberRounded
-} from "@mui/icons-material";
+import { AutoGraphRounded, GroupsRounded, InfoOutlined, SportsScoreRounded, WarningAmberRounded } from "@mui/icons-material";
 import {
   Box,
-  Chip,
   CircularProgress,
   Divider,
   Grid2,
@@ -58,6 +51,15 @@ export function DashboardPage() {
   }
 
   const dashboardSummary = dashboardQuery.data;
+  const seasonQuery = seasonId ? `?seasonId=${seasonId}` : "";
+  const checklistLinkByCode: Record<string, string> = {
+    PLAYERS_WITHOUT_TEAM: `/assignments${seasonQuery}`,
+    INCOMPLETE_PLAYERS: `/sports${seasonQuery}`,
+    PLAYERS_WITHOUT_TRAINING_PREFERENCE: `/sports${seasonQuery}`,
+    PLAYERS_WITHOUT_MATCH_PREFERENCE: `/sports${seasonQuery}`,
+    PLAYERS_WITHOUT_PRIMARY_POSITION: `/sports${seasonQuery}`,
+    PLAYERS_WITHOUT_LEVEL: `/sports${seasonQuery}`
+  };
 
   return (
     <PageContainer
@@ -66,39 +68,39 @@ export function DashboardPage() {
       title="Sala de control del club"
     >
       <Stack spacing={3.5}>
-        <Stack direction="row" spacing={1.25} sx={{ flexWrap: "wrap" }}>
-          <Chip color="primary" label="Entrando por dashboard" />
-          <Chip label="Escritorio primero" variant="outlined" />
-          <Chip label="MVP funcional" variant="outlined" />
-        </Stack>
-
         <Grid2 container spacing={2.5}>
           <Grid2 size={{ xs: 12, sm: 6, xl: 3 }}>
-            <KpiCard
-              accent="blue"
-              helper="Jugadores activos con rol operativo"
-              icon={<GroupsRounded fontSize="small" />}
-              label="Jugadores activos"
-              value={String(dashboardSummary.activePlayers)}
-            />
+            <Box component={Link} sx={{ display: "block", color: "inherit", textDecoration: "none" }} to="/persons">
+              <KpiCard
+                accent="blue"
+                helper="Jugadores activos con rol operativo"
+                icon={<GroupsRounded fontSize="small" />}
+                label="Jugadores activos"
+                value={String(dashboardSummary.activePlayers)}
+              />
+            </Box>
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, xl: 3 }}>
-            <KpiCard
-              accent="gold"
-              helper="Pendientes de ubicacion deportiva"
-              icon={<SportsScoreRounded fontSize="small" />}
-              label="Jugadores sin equipo"
-              value={String(dashboardSummary.playersWithoutTeam)}
-            />
+            <Box component={Link} sx={{ display: "block", color: "inherit", textDecoration: "none" }} to={`/assignments${seasonQuery}`}>
+              <KpiCard
+                accent="gold"
+                helper="Pendientes de ubicacion deportiva"
+                icon={<SportsScoreRounded fontSize="small" />}
+                label="Jugadores sin equipo"
+                value={String(dashboardSummary.playersWithoutTeam)}
+              />
+            </Box>
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, xl: 3 }}>
-            <KpiCard
-              accent="neutral"
-              helper="Jugadores con informacion a completar"
-              icon={<WarningAmberRounded fontSize="small" />}
-              label="Datos incompletos"
-              value={String(dashboardSummary.incompletePlayers)}
-            />
+            <Box component={Link} sx={{ display: "block", color: "inherit", textDecoration: "none" }} to={`/sports${seasonQuery}`}>
+              <KpiCard
+                accent="neutral"
+                helper="Jugadores con informacion a completar"
+                icon={<WarningAmberRounded fontSize="small" />}
+                label="Datos incompletos"
+                value={String(dashboardSummary.incompletePlayers)}
+              />
+            </Box>
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6, xl: 3 }}>
             <KpiCard
@@ -118,7 +120,7 @@ export function DashboardPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Equipo</TableCell>
-                    <TableCell>Codigo</TableCell>
+                    <TableCell align="right">Nivel medio</TableCell>
                     <TableCell align="right">Activos</TableCell>
                   </TableRow>
                 </TableHead>
@@ -142,7 +144,7 @@ export function DashboardPage() {
                           {team.teamName}
                         </Typography>
                       </TableCell>
-                      <TableCell>{team.teamCode}</TableCell>
+                      <TableCell align="right">{formatMetricValue(team.averageLevel)}</TableCell>
                       <TableCell align="right">{team.activePlayers}</TableCell>
                     </TableRow>
                   ))}
@@ -196,24 +198,37 @@ export function DashboardPage() {
                       borderTop: index === 0 ? "none" : "1px dashed #D8E0EA"
                     }}
                   >
-                    <ListItemText
-                      primary={item.label}
-                      secondary={`Codigo: ${item.code}`}
-                      primaryTypographyProps={{ fontWeight: 600 }}
-                    />
                     <Box
+                      component={Link}
                       sx={{
-                        minWidth: 46,
-                        height: 46,
-                        borderRadius: "50%",
-                        display: "grid",
-                        placeItems: "center",
-                        bgcolor: item.count > 0 ? "rgba(237, 203, 80, 0.24)" : "rgba(58, 104, 168, 0.1)",
-                        color: item.count > 0 ? "warning.main" : "primary.main",
-                        fontWeight: 700
+                        display: "flex",
+                        width: "100%",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        color: "inherit",
+                        textDecoration: "none"
                       }}
+                      to={checklistLinkByCode[item.code] ?? `/dashboard${seasonQuery}`}
                     >
-                      {item.count}
+                      <ListItemText
+                        primary={item.label}
+                        secondary={`Codigo: ${item.code}`}
+                        primaryTypographyProps={{ fontWeight: 600 }}
+                      />
+                      <Box
+                        sx={{
+                          minWidth: 46,
+                          height: 46,
+                          borderRadius: "50%",
+                          display: "grid",
+                          placeItems: "center",
+                          bgcolor: item.count > 0 ? "rgba(237, 203, 80, 0.24)" : "rgba(58, 104, 168, 0.1)",
+                          color: item.count > 0 ? "warning.main" : "primary.main",
+                          fontWeight: 700
+                        }}
+                      >
+                        {item.count}
+                      </Box>
                     </Box>
                   </ListItem>
                 ))}
