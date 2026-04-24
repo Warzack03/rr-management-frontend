@@ -1,10 +1,8 @@
-import { NotificationsNoneRounded, SearchRounded } from "@mui/icons-material";
 import {
   alpha,
   AppBar,
   Box,
   Chip,
-  IconButton,
   MenuItem,
   Stack,
   TextField,
@@ -33,7 +31,8 @@ export function AppHeader() {
   const isDashboardRoute = location.pathname.startsWith("/dashboard");
   const isAssignmentsRoute = location.pathname.startsWith("/assignments");
   const isSportsRoute = location.pathname.startsWith("/sports");
-  const hasSeasonContext = isDashboardRoute || isAssignmentsRoute || isSportsRoute;
+  const isTreasuryRoute = location.pathname.startsWith("/treasury");
+  const hasSeasonContext = isDashboardRoute || isAssignmentsRoute || isSportsRoute || isTreasuryRoute;
   const seasonId = searchParams.get("seasonId");
 
   const currentSeason = useMemo(() => {
@@ -117,20 +116,6 @@ export function AppHeader() {
               }}
             />
           )}
-          <IconButton
-            sx={{
-              bgcolor: "rgba(58, 104, 168, 0.08)"
-            }}
-          >
-            <SearchRounded />
-          </IconButton>
-          <IconButton
-            sx={{
-              bgcolor: "rgba(58, 104, 168, 0.08)"
-            }}
-          >
-            <NotificationsNoneRounded />
-          </IconButton>
         </Stack>
       </Toolbar>
     </AppBar>

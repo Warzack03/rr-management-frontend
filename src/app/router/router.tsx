@@ -11,6 +11,9 @@ import { PersonsPage } from "../../modules/persons/pages/persons-page";
 import { SeasonsPage } from "../../modules/seasons/pages/seasons-page";
 import { SportsPage } from "../../modules/sports/pages/sports-page";
 import { TeamsPage } from "../../modules/teams/pages/teams-page";
+import { TreasuryConfigPage } from "../../modules/treasury/pages/treasury-config-page";
+import { TreasuryPage } from "../../modules/treasury/pages/treasury-page";
+import { TreasuryPersonPage } from "../../modules/treasury/pages/treasury-person-page";
 
 export const router = createBrowserRouter([
   {
@@ -81,6 +84,30 @@ export const router = createBrowserRouter([
             handle: {
               title: "Equipos",
               subtitle: "Alta, edicion y baja logica de equipos"
+            }
+          },
+          {
+            path: "treasury",
+            element: <TreasuryPage />,
+            handle: {
+              title: "Tesoreria",
+              subtitle: "Seguimiento de deuda, cobros y extras por temporada"
+            }
+          },
+          {
+            path: "treasury/config",
+            element: <TreasuryConfigPage />,
+            handle: {
+              title: "Configuracion economica",
+              subtitle: "Reglas por bloque, condicion y concepto"
+            }
+          },
+          {
+            path: "treasury/persons/:personId",
+            element: <TreasuryPersonPage />,
+            handle: {
+              title: "Detalle economico",
+              subtitle: "Perfil, obligaciones y movimientos por persona"
             }
           },
           {

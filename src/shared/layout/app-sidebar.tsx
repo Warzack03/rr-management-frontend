@@ -1,5 +1,6 @@
 import {
   AutoGraphRounded,
+  AccountBalanceWalletRounded,
   CalendarMonthRounded,
   FlagRounded,
   GroupsRounded,
@@ -20,6 +21,7 @@ import {
 } from "@mui/material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuthMe, useLogoutMutation } from "../../modules/auth/api/auth-hooks";
+import { CrestAvatar } from "../components/brand/crest-avatar";
 import { tokens } from "../theme/tokens";
 
 const navItems = [
@@ -42,6 +44,11 @@ const navItems = [
     label: "Equipos",
     path: "/teams",
     icon: <FlagRounded />
+  },
+  {
+    label: "Tesoreria",
+    path: "/treasury",
+    icon: <AccountBalanceWalletRounded />
   },
   {
     label: "Temporadas",
@@ -83,24 +90,15 @@ export function AppSidebar() {
             px: 1
           }}
         >
-          <Avatar
+          <Box
             sx={{
-              width: 54,
-              height: 54,
-              bgcolor: "rgba(255,255,255,0.14)"
+              "& .MuiAvatar-root": {
+                bgcolor: "rgba(255,255,255,0.14)"
+              }
             }}
           >
-            <Box
-              component="img"
-              alt="Rising Raimon"
-              src="/assets/brand/escudo.png"
-              sx={{
-                width: 40,
-                height: 40,
-                objectFit: "contain"
-              }}
-            />
-          </Avatar>
+            <CrestAvatar alt="Rising Raimon" size={54} src="/assets/brand/escudo.png" />
+          </Box>
 
           <Box>
             <Typography

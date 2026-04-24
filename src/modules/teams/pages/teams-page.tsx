@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AddRounded, EditRounded } from "@mui/icons-material";
 import {
   Alert,
-  Avatar,
   Button,
   Chip,
   CircularProgress,
@@ -25,6 +24,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
+import { CrestAvatar } from "../../../shared/components/brand/crest-avatar";
 import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
@@ -230,10 +230,7 @@ export function TeamsPage() {
                         onClick={() => navigate(`/dashboard/teams/${team.id}`)}
                       >
                         <TableCell>
-                          <Avatar
-                            src={getTeamCrestSrc(team.branch)}
-                            sx={{ width: 28, height: 28, bgcolor: "rgba(58, 104, 168, 0.08)" }}
-                          />
+                          <CrestAvatar alt={team.name} size={28} src={getTeamCrestSrc(team.branch)} />
                         </TableCell>
                         <TableCell>
                           <Typography fontWeight={600} sx={{ color: "primary.main" }}>{team.name}</Typography>
@@ -300,10 +297,7 @@ export function TeamsPage() {
                     {inactiveTeams.map((team) => (
                       <TableRow key={team.id} hover>
                         <TableCell>
-                          <Avatar
-                            src={getTeamCrestSrc(team.branch)}
-                            sx={{ width: 28, height: 28, bgcolor: "rgba(58, 104, 168, 0.08)" }}
-                          />
+                          <CrestAvatar alt={team.name} size={28} src={getTeamCrestSrc(team.branch)} />
                         </TableCell>
                         <TableCell>
                           <Typography fontWeight={600}>{team.name}</Typography>

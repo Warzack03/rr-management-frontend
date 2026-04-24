@@ -1,6 +1,7 @@
 import { KeyboardBackspaceRounded, NotesRounded, ScheduleRounded, SportsSoccerRounded } from "@mui/icons-material";
-import { Avatar, Button, Chip, CircularProgress, Grid2, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Button, Chip, CircularProgress, Grid2, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { CrestAvatar } from "../../../shared/components/brand/crest-avatar";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { KpiCard } from "../../../shared/components/data-display/kpi-card";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
@@ -8,6 +9,9 @@ import { PageContainer } from "../../../shared/layout/page-container";
 import { formatMetricValue } from "../../../shared/utils/format-metric-value";
 import { getPositionLabel } from "../../sports/model/sports-ui";
 import { getTeamBranchLabel, getTeamCrestSrc } from "../../teams/model/teams-ui";
+import { useTreasuryPersons } from "../../treasury/api/treasury-hooks";
+import { TreasuryPaymentStatusChip } from "../../treasury/components/treasury-payment-status-chip";
+import { formatCurrency, getTreasuryPlayerConditionLabel } from "../../treasury/model/treasury-ui";
 import { useDashboardTeam } from "../api/dashboard-hooks";
 import { PositionSummaryChart } from "../components/position-summary-chart";
 
@@ -17,8 +21,11 @@ export function TeamDashboardPage() {
   const teamId = params.teamId ?? "";
   const seasonId = searchParams.get("seasonId");
   const teamDashboardQuery = useDashboardTeam(teamId, seasonId ? Number(seasonId) : undefined);
+  const treasuryPersonsQuery = useTreasuryPersons({
+    seasonId: seasonId ? Number(seasonId) : undefined
+  });
 
-  if (teamDashboardQuery.isLoading) {
+  if (teamDashboardQuery.isLoading || treasuryPersonsQuery.isLoading) {
     return (
       <PageContainer title="Dashboard por equipo">
         <Stack sx={{ minHeight: 320, alignItems: "center", justifyContent: "center" }}>
@@ -28,7 +35,7 @@ export function TeamDashboardPage() {
     );
   }
 
-  if (teamDashboardQuery.isError || !teamDashboardQuery.data) {
+  if (teamDashboardQuery.isError || treasuryPersonsQuery.isError || !teamDashboardQuery.data || !treasuryPersonsQuery.data) {
     return (
       <PageContainer title="Dashboard por equipo">
         <EmptyState
@@ -40,6 +47,8 @@ export function TeamDashboardPage() {
   }
 
   const dashboard = teamDashboardQuery.data;
+  const treasuryRows = treasuryPersonsQuery.data.filter((row) => row.currentTeamCode === dashboard.team.code);
+  const treasuryRowsByPersonId = new Map(treasuryRows.map((row) => [row.personId, row]));
 
   return (
     <PageContainer
@@ -49,19 +58,12 @@ export function TeamDashboardPage() {
         </Button>
       }
       description="Vista compacta de un equipo concreto para leer rapido su salud operativa y la distribucion de la plantilla."
-      eyebrow={`${dashboard.team.code} · ${getTeamBranchLabel(dashboard.team.branch)}`}
+      eyebrow={`${dashboard.team.code} - ${getTeamBranchLabel(dashboard.team.branch)}`}
       title={dashboard.team.name}
     >
       <Stack spacing={3.5}>
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-          <Avatar
-            src={getTeamCrestSrc(dashboard.team.branch)}
-            sx={{
-              width: 44,
-              height: 44,
-              bgcolor: "rgba(58, 104, 168, 0.1)"
-            }}
-          />
+          <CrestAvatar alt={dashboard.team.name} size={44} src={getTeamCrestSrc(dashboard.team.branch)} />
           <Chip color="primary" label={dashboard.team.active ? "Equipo activo" : "Equipo inactivo"} />
           <Chip label={`Sede: ${getTeamBranchLabel(dashboard.team.branch)}`} variant="outlined" />
         </Stack>
@@ -126,7 +128,10 @@ export function TeamDashboardPage() {
           </Grid2>
         </Grid2>
 
-        <SectionCard subtitle="Listado base de jugadores activos del equipo en la temporada seleccionada" title="Plantilla activa">
+        <SectionCard
+          subtitle="Lectura unificada de plantilla y tesoreria del equipo para evitar scroll innecesario."
+          title="Plantilla y tesoreria"
+        >
           {dashboard.players.length === 0 ? (
             <EmptyState
               description="No hay jugadores activos asignados a este equipo en la temporada seleccionada."
@@ -139,20 +144,45 @@ export function TeamDashboardPage() {
                   <TableCell>Nombre completo</TableCell>
                   <TableCell align="right">Nivel</TableCell>
                   <TableCell>Posicion primaria</TableCell>
+                  <TableCell>Condicion</TableCell>
+                  <TableCell align="right">Previsto</TableCell>
+                  <TableCell align="right">Pendiente</TableCell>
+                  <TableCell>Estado</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dashboard.players.map((player) => (
-                  <TableRow key={player.personId} hover>
-                    <TableCell>
-                      <Typography component={Link} sx={{ color: "primary.main", fontWeight: 600, textDecoration: "none" }} to={`/persons/${player.personId}`}>
-                        {player.fullName}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">{player.level ?? "--"}</TableCell>
-                    <TableCell>{getPositionLabel(player.primaryPosition)}</TableCell>
-                  </TableRow>
-                ))}
+                {dashboard.players.map((player) => {
+                  const treasuryRow = treasuryRowsByPersonId.get(player.personId);
+
+                  return (
+                    <TableRow key={player.personId} hover>
+                      <TableCell>
+                        <Stack spacing={0.35}>
+                          <Typography
+                            component={Link}
+                            sx={{ color: "primary.main", fontWeight: 600, textDecoration: "none" }}
+                            to={`/persons/${player.personId}`}
+                          >
+                            {player.fullName}
+                          </Typography>
+                          {treasuryRow?.manualOverride ? <Chip color="warning" label="Manual" size="small" sx={{ width: "fit-content" }} /> : null}
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="right">{player.level ?? "--"}</TableCell>
+                      <TableCell>{getPositionLabel(player.primaryPosition)}</TableCell>
+                      <TableCell>{treasuryRow ? getTreasuryPlayerConditionLabel(treasuryRow.playerCondition) : "--"}</TableCell>
+                      <TableCell align="right">{treasuryRow ? formatCurrency(treasuryRow.totalExpected) : "--"}</TableCell>
+                      <TableCell align="right">{treasuryRow ? formatCurrency(treasuryRow.totalPending) : "--"}</TableCell>
+                      <TableCell>
+                        {treasuryRow ? (
+                          <TreasuryPaymentStatusChip overdueAmount={treasuryRow.totalOverdue} pendingAmount={treasuryRow.totalPending} />
+                        ) : (
+                          <Chip label="Sin ficha" size="small" variant="outlined" />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

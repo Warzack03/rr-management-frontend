@@ -30,7 +30,7 @@ export async function httpClient<T>(path: string, options: RequestOptions = {}):
     method: options.method ?? "GET",
     credentials: "include",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json; charset=UTF-8"
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
     signal: options.signal

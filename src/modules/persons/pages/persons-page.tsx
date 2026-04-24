@@ -21,7 +21,11 @@ import { Link } from "react-router-dom";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
+import { normalizeSearchText } from "../../../shared/utils/normalize-search-text";
 import type { PersonRoleType } from "../../../shared/types/api";
+import { useSeasons } from "../../seasons/api/seasons-hooks";
+import { useTreasuryPersons } from "../../treasury/api/treasury-hooks";
+import { TreasuryPaymentStatusChip } from "../../treasury/components/treasury-payment-status-chip";
 import { usePersons } from "../api/persons-hooks";
 import { getDocumentStatusLabel, getPersonRoleLabel, personRoleOptions } from "../model/persons-ui";
 
@@ -29,21 +33,34 @@ const PAGE_SIZE = 20;
 
 export function PersonsPage() {
   const personsQuery = usePersons();
+  const seasonsQuery = useSeasons();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"" | PersonRoleType>("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("true");
   const [page, setPage] = useState(1);
   const persons = personsQuery.data ?? [];
+  const defaultSeason =
+    (seasonsQuery.data ?? []).find((season) => season.status === "CURRENT") ??
+    (seasonsQuery.data ?? []).find((season) => season.status === "PLANNING") ??
+    (seasonsQuery.data ?? [])[0] ??
+    null;
+  const treasuryQuery = useTreasuryPersons({
+    seasonId: defaultSeason?.id
+  });
+  const treasuryByPersonId = useMemo(
+    () => new Map((treasuryQuery.data ?? []).map((row) => [row.personId, row])),
+    [treasuryQuery.data]
+  );
 
   const filteredPersons = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = normalizeSearchText(search);
 
     return persons.filter((person) => {
-      const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
+      const fullName = normalizeSearchText(`${person.firstName} ${person.lastName}`);
       const matchesSearch =
         normalizedSearch.length === 0 ||
         fullName.includes(normalizedSearch) ||
-        person.nifValue.toLowerCase().includes(normalizedSearch);
+        normalizeSearchText(person.nifValue).includes(normalizedSearch);
       const matchesRole = roleFilter === "" || person.roles.includes(roleFilter);
       const matchesActive = activeFilter === "" || String(person.active) === activeFilter;
 
@@ -57,7 +74,7 @@ export function PersonsPage() {
     return filteredPersons.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredPersons, page]);
 
-  if (personsQuery.isLoading) {
+  if (personsQuery.isLoading || seasonsQuery.isLoading || treasuryQuery.isLoading) {
     return (
       <PageContainer eyebrow="Operativa maestra" title="Personas">
         <Stack sx={{ minHeight: 320, alignItems: "center", justifyContent: "center" }}>
@@ -67,7 +84,7 @@ export function PersonsPage() {
     );
   }
 
-  if (personsQuery.isError || !personsQuery.data) {
+  if (personsQuery.isError || seasonsQuery.isError || treasuryQuery.isError || !personsQuery.data) {
     return (
       <PageContainer eyebrow="Operativa maestra" title="Personas">
         <EmptyState
@@ -156,36 +173,48 @@ export function PersonsPage() {
                     <TableCell>Persona</TableCell>
                     <TableCell>Roles</TableCell>
                     <TableCell>Documentacion</TableCell>
+                    <TableCell>Tesoreria</TableCell>
                     <TableCell>Estado</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {paginatedPersons.map((person) => (
-                    <TableRow key={person.id} hover>
-                      <TableCell>
-                        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                          <Avatar sx={{ bgcolor: "primary.main" }}>{person.firstName.slice(0, 1)}</Avatar>
-                          <Stack spacing={0.35}>
-                            <Typography component={Link} sx={{ color: "primary.main", fontWeight: 600 }} to={`/persons/${person.id}`}>
-                              {person.firstName} {person.lastName}
-                            </Typography>
-                            <Typography color="text.secondary" variant="body2">
-                              {person.nifType} - {person.nifValue}
-                            </Typography>
+                  {paginatedPersons.map((person) => {
+                    const treasurySummary = treasuryByPersonId.get(person.id);
+
+                    return (
+                      <TableRow key={person.id} hover>
+                        <TableCell>
+                          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                            <Avatar sx={{ bgcolor: "primary.main" }}>{person.firstName.slice(0, 1)}</Avatar>
+                            <Stack spacing={0.35}>
+                              <Typography component={Link} sx={{ color: "primary.main", fontWeight: 600 }} to={`/persons/${person.id}`}>
+                                {person.firstName} {person.lastName}
+                              </Typography>
+                              <Typography color="text.secondary" variant="body2">
+                                {person.nifType} - {person.nifValue}
+                              </Typography>
+                            </Stack>
                           </Stack>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                          {person.roles.map((role) => (
-                            <Chip key={role} label={getPersonRoleLabel(role)} size="small" />
-                          ))}
-                        </Stack>
-                      </TableCell>
-                      <TableCell>{getDocumentStatusLabel(person.documentStatus)}</TableCell>
-                      <TableCell>{person.active ? "Activo" : "Inactivo"}</TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                            {person.roles.map((role) => (
+                              <Chip key={role} label={getPersonRoleLabel(role)} size="small" />
+                            ))}
+                          </Stack>
+                        </TableCell>
+                        <TableCell>{getDocumentStatusLabel(person.documentStatus)}</TableCell>
+                        <TableCell>
+                          {treasurySummary ? (
+                            <TreasuryPaymentStatusChip overdueAmount={treasurySummary.totalOverdue} pendingAmount={treasurySummary.totalPending} />
+                          ) : (
+                            <Chip label="Sin dato" size="small" variant="outlined" />
+                          )}
+                        </TableCell>
+                        <TableCell>{person.active ? "Activo" : "Inactivo"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
 

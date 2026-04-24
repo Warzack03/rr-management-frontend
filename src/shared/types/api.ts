@@ -279,3 +279,178 @@ export type UpdatePlayerProfilePayload = {
   level: number | null;
   sportsNotes: string | null;
 };
+
+export type TreasuryEconomicBlock = {
+  id: number;
+  code: string;
+  name: string;
+  active: boolean;
+};
+
+export type TreasuryPlayerCondition = "NEW" | "RETURNING";
+
+export type TreasuryConceptCode = "FIRST_SEASON_PAYMENT" | "SECOND_SEASON_PAYMENT" | "EXTRA_EQUIPMENT";
+
+export type TreasuryPaymentMethod = "CASH" | "TRANSFER" | "BIZUM";
+
+export type TreasuryObligationStatus = "OPEN" | "PARTIALLY_PAID" | "PAID";
+
+export type TreasurySeasonRule = {
+  id: number | null;
+  economicBlockId: number;
+  economicBlockCode: string;
+  economicBlockName: string;
+  playerCondition: TreasuryPlayerCondition;
+  conceptCode: TreasuryConceptCode;
+  defaultAmount: number;
+  defaultDueDays: number;
+  active: boolean;
+};
+
+export type TreasuryConfig = {
+  seasonId: number;
+  seasonName: string;
+  seasonStatus: Season["status"];
+  readOnly: boolean;
+  economicBlocks: TreasuryEconomicBlock[];
+  rules: TreasurySeasonRule[];
+};
+
+export type TreasurySummary = {
+  totalExpected: number;
+  totalCollected: number;
+  totalPending: number;
+  totalOverdue: number;
+  peopleWithDebt: number;
+  peopleUpToDate: number;
+};
+
+export type TreasuryPersonSummary = {
+  personId: number;
+  fullName: string;
+  nifValue: string;
+  currentTeamName: string | null;
+  currentTeamCode: string | null;
+  economicBlockCode: string;
+  economicBlockName: string;
+  playerCondition: TreasuryPlayerCondition;
+  manualOverride: boolean;
+  totalExpected: number;
+  totalCollected: number;
+  totalPending: number;
+  totalOverdue: number;
+  notes: string | null;
+};
+
+export type TreasuryPersonProfile = {
+  id: number | null;
+  economicBlockId: number;
+  economicBlockCode: string;
+  economicBlockName: string;
+  playerCondition: TreasuryPlayerCondition;
+  manualOverride: boolean;
+  notes: string | null;
+};
+
+export type TreasuryObligation = {
+  id: number;
+  conceptCode: TreasuryConceptCode;
+  teamName: string | null;
+  expectedAmount: number;
+  collectedAmount: number;
+  pendingAmount: number;
+  activatedAt: string;
+  dueDate: string;
+  status: TreasuryObligationStatus;
+  overdue: boolean;
+  deletable: boolean;
+  notes: string | null;
+};
+
+export type TreasuryMovementAllocation = {
+  obligationId: number;
+  obligationConceptCode: TreasuryConceptCode;
+  allocatedAmount: number;
+};
+
+export type TreasuryMovement = {
+  id: number;
+  movementType: "CHARGE" | "PAYMENT" | "ADJUSTMENT";
+  paymentMethod: TreasuryPaymentMethod | null;
+  amount: number;
+  movementDate: string;
+  receivedByName: string | null;
+  notes: string | null;
+  allocations: TreasuryMovementAllocation[];
+};
+
+export type TreasuryPersonDetail = {
+  personId: number;
+  fullName: string;
+  nifValue: string;
+  active: boolean;
+  currentTeamName: string | null;
+  currentTeamCode: string | null;
+  profile: TreasuryPersonProfile;
+  totalExpected: number;
+  totalCollected: number;
+  totalPending: number;
+  totalOverdue: number;
+  obligations: TreasuryObligation[];
+  movements: TreasuryMovement[];
+};
+
+export type TreasuryStaffReceiver = {
+  id: number;
+  fullName: string;
+};
+
+export type UpdateTreasuryConfigPayload = {
+  rules: Array<{
+    id?: number | null;
+    economicBlockId: number;
+    playerCondition: TreasuryPlayerCondition;
+    conceptCode: TreasuryConceptCode;
+    defaultAmount: number;
+    defaultDueDays: number;
+    active: boolean;
+  }>;
+};
+
+export type UpdateTreasuryPersonProfilePayload = {
+  economicBlockId?: number;
+  playerCondition?: TreasuryPlayerCondition;
+  manualOverride?: boolean;
+  notes?: string;
+};
+
+export type UpdateTreasuryObligationPayload = {
+  expectedAmount?: number;
+  dueDate?: string;
+  notes?: string;
+};
+
+export type CreateTreasuryChargePayload = {
+  personId: number;
+  seasonId: number;
+  conceptCode: TreasuryConceptCode;
+  teamId?: number;
+  amount: number;
+  activatedAt?: string;
+  dueDate?: string;
+  notes?: string;
+};
+
+export type CreateTreasuryPaymentPayload = {
+  personId: number;
+  seasonId: number;
+  paymentMethod: TreasuryPaymentMethod;
+  amount: number;
+  movementDate?: string;
+  receivedByPersonId?: number;
+  notes?: string;
+  allocations?: Array<{
+    obligationId: number;
+    amount: number;
+  }>;
+};
