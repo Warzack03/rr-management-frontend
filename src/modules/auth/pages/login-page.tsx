@@ -95,7 +95,7 @@ export function LoginPage() {
                     <Box
                       component="img"
                       alt="Escudo Rising Raimon"
-                      src="/assets/brand/escudo.png"
+                      src={`${import.meta.env.BASE_URL}assets/brand/escudo.png`}
                       sx={{ width: 68, height: 68 }}
                     />
                     <Box>
@@ -173,7 +173,7 @@ export function LoginPage() {
             <Box
               component="img"
               alt="Escudo secundario"
-              src="/assets/brand/escudo-negro.png"
+              src={`${import.meta.env.BASE_URL}assets/brand/escudo-negro.png`}
               sx={{
                 position: "absolute",
                 inset: "8% auto auto 4%",
@@ -211,7 +211,7 @@ export function LoginPage() {
                   <Box
                     component="img"
                     alt="Mascota Rising Raimon"
-                    src="/assets/brand/mascota-login.png"
+                    src={`${import.meta.env.BASE_URL}assets/brand/mascota-login.png`}
                     sx={{
                       width: 360,
                       maxWidth: "44%",

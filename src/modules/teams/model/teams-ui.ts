@@ -5,5 +5,6 @@ export function getTeamBranchLabel(branch: Team["branch"]) {
 }
 
 export function getTeamCrestSrc(branch: Team["branch"]) {
-  return branch === "CAT" ? "/assets/brand/catalunya.png" : "/assets/brand/escudo.png";
+  const fileName = branch === "CAT" ? "catalunya.png" : "escudo.png";
+  return `${import.meta.env.BASE_URL}assets/brand/${fileName}`;
 }

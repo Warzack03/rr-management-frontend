@@ -126,7 +126,7 @@ export function AppSidebar() {
               }
             }}
           >
-            <CrestAvatar alt="Rising Raimon" size={54} src="/assets/brand/escudo.png" />
+            <CrestAvatar alt="Rising Raimon" size={54} src={`${import.meta.env.BASE_URL}assets/brand/escudo.png`} />
           </Box>
 
           <Box>
