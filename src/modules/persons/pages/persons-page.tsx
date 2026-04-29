@@ -8,30 +8,35 @@ import {
   MenuItem,
   Pagination,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
 import { normalizeSearchText } from "../../../shared/utils/normalize-search-text";
 import type { PersonRoleType } from "../../../shared/types/api";
+import { useLogisticsRequests } from "../../logistics/api/logistics-hooks";
 import { useSeasons } from "../../seasons/api/seasons-hooks";
 import { useTreasuryPersons } from "../../treasury/api/treasury-hooks";
 import { TreasuryPaymentStatusChip } from "../../treasury/components/treasury-payment-status-chip";
-import { usePersons } from "../api/persons-hooks";
+import { usePersons, useUpdatePersonByIdMutation } from "../api/persons-hooks";
 import { getDocumentStatusLabel, getPersonRoleLabel, personRoleOptions } from "../model/persons-ui";
 
 const PAGE_SIZE = 20;
 
 export function PersonsPage() {
+  const { showSuccess } = useAppFeedback();
   const personsQuery = usePersons();
   const seasonsQuery = useSeasons();
   const [search, setSearch] = useState("");
@@ -47,10 +52,25 @@ export function PersonsPage() {
   const treasuryQuery = useTreasuryPersons({
     seasonId: defaultSeason?.id
   });
+  const logisticsRequestsQuery = useLogisticsRequests(defaultSeason?.id);
+  const updatePersonMutation = useUpdatePersonByIdMutation();
   const treasuryByPersonId = useMemo(
     () => new Map((treasuryQuery.data ?? []).map((row) => [row.personId, row])),
     [treasuryQuery.data]
   );
+  const logisticsPendingByPersonId = useMemo(() => {
+    const pendingStatuses = new Set(["PENDING_STOCK", "PARTIALLY_RESERVED", "RESERVED_FROM_STOCK"]);
+    const pendingMap = new Map<number, boolean>();
+
+    (logisticsRequestsQuery.data ?? []).forEach((request) => {
+      if (!request.personId || !pendingStatuses.has(request.status)) {
+        return;
+      }
+      pendingMap.set(request.personId, true);
+    });
+
+    return pendingMap;
+  }, [logisticsRequestsQuery.data]);
 
   const filteredPersons = useMemo(() => {
     const normalizedSearch = normalizeSearchText(search);
@@ -74,7 +94,7 @@ export function PersonsPage() {
     return filteredPersons.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredPersons, page]);
 
-  if (personsQuery.isLoading || seasonsQuery.isLoading || treasuryQuery.isLoading) {
+  if (personsQuery.isLoading || seasonsQuery.isLoading || treasuryQuery.isLoading || logisticsRequestsQuery.isLoading) {
     return (
       <PageContainer eyebrow="Operativa maestra" title="Personas">
         <Stack sx={{ minHeight: 320, alignItems: "center", justifyContent: "center" }}>
@@ -84,7 +104,7 @@ export function PersonsPage() {
     );
   }
 
-  if (personsQuery.isError || seasonsQuery.isError || treasuryQuery.isError || !personsQuery.data) {
+  if (personsQuery.isError || seasonsQuery.isError || treasuryQuery.isError || logisticsRequestsQuery.isError || !personsQuery.data) {
     return (
       <PageContainer eyebrow="Operativa maestra" title="Personas">
         <EmptyState
@@ -174,12 +194,14 @@ export function PersonsPage() {
                     <TableCell>Roles</TableCell>
                     <TableCell>Documentacion</TableCell>
                     <TableCell>Tesoreria</TableCell>
-                    <TableCell>Estado</TableCell>
+                    <TableCell>Necesidades</TableCell>
+                    <TableCell>Activo</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {paginatedPersons.map((person) => {
                     const treasurySummary = treasuryByPersonId.get(person.id);
+                    const hasPendingNeeds = logisticsPendingByPersonId.get(person.id) ?? false;
 
                     return (
                       <TableRow key={person.id} hover>
@@ -211,7 +233,45 @@ export function PersonsPage() {
                             <Chip label="Sin dato" size="small" variant="outlined" />
                           )}
                         </TableCell>
-                        <TableCell>{person.active ? "Activo" : "Inactivo"}</TableCell>
+                        <TableCell>
+                          <Chip
+                            color={hasPendingNeeds ? "warning" : "success"}
+                            label={hasPendingNeeds ? "Si" : "No"}
+                            size="small"
+                            variant={hasPendingNeeds ? "filled" : "outlined"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={person.active ? "Desactivar persona" : "Activar persona"}>
+                            <Switch
+                              checked={person.active}
+                              color="primary"
+                              disabled={updatePersonMutation.isPending}
+                              inputProps={{ "aria-label": `Cambiar estado de ${person.firstName} ${person.lastName}` }}
+                              onChange={(_, checked) => {
+                                void updatePersonMutation.mutateAsync({
+                                  personId: String(person.id),
+                                  payload: {
+                                    firstName: person.firstName,
+                                    lastName: person.lastName,
+                                    nifType: person.nifType,
+                                    nifValue: person.nifValue,
+                                    birthDate: person.birthDate ?? undefined,
+                                    address: person.address ?? undefined,
+                                    contact: person.contact ?? undefined,
+                                    active: checked,
+                                    documentStatus: person.documentStatus ?? undefined,
+                                    notes: person.notes ?? undefined
+                                  }
+                                }, {
+                                  onSuccess: () => {
+                                    showSuccess(`Persona ${checked ? "activada" : "desactivada"} correctamente.`);
+                                  }
+                                });
+                              }}
+                            />
+                          </Tooltip>
+                        </TableCell>
                       </TableRow>
                     );
                   })}

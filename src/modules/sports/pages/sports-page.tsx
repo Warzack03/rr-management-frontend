@@ -55,7 +55,7 @@ const sportsFormSchema = z.object({
   primaryPosition: z.enum(["PORTERO", "DEFENSA_CENTRAL", "DEFENSA_LATERAL", "CENTROCAMPISTA", "BANDA", "DELANTERO"]).nullable(),
   secondaryPosition: z.enum(["PORTERO", "DEFENSA_CENTRAL", "DEFENSA_LATERAL", "CENTROCAMPISTA", "BANDA", "DELANTERO"]).nullable(),
   tertiaryPosition: z.enum(["PORTERO", "DEFENSA_CENTRAL", "DEFENSA_LATERAL", "CENTROCAMPISTA", "BANDA", "DELANTERO"]).nullable(),
-  trainingPreference: z.enum(["LUNES_Y_MIERCOLES_16_30_18_00", "MIERCOLES_20_00_21_00_Y_VIERNES_19_00_21_00", "INDIFERENTE"]).nullable(),
+  trainingPreference: z.enum(["LUNES_Y_MIERCOLES_16_30_18_00", "MIERCOLES_20_00_21_00_Y_VIERNES_20_30_22_30", "INDIFERENTE"]).nullable(),
   matchPreference: z.enum(["SABADO_TARDE", "DOMINGO_MANANA", "DOMINGO_TARDE", "INDIFERENTE"]).nullable(),
   level: z.union([z.coerce.number().int().min(1, "Minimo 1").max(10, "Maximo 10"), z.null()]),
   sportsNotes: z.string().optional()

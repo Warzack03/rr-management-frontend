@@ -5,6 +5,11 @@ import { AuthGuard } from "../../modules/auth/components/auth-guard";
 import { LoginPage } from "../../modules/auth/pages/login-page";
 import { DashboardPage } from "../../modules/dashboard/pages/dashboard-page";
 import { TeamDashboardPage } from "../../modules/dashboard/pages/team-dashboard-page";
+import { LogisticsDeliveriesPage } from "../../modules/logistics/pages/logistics-deliveries-page";
+import { LogisticsEquipmentPage } from "../../modules/logistics/pages/logistics-equipment-page";
+import { LogisticsExternalRecipientsPage } from "../../modules/logistics/pages/logistics-external-recipients-page";
+import { LogisticsOrdersPage } from "../../modules/logistics/pages/logistics-orders-page";
+import { LogisticsStockPage } from "../../modules/logistics/pages/logistics-stock-page";
 import { PersonCreatePage } from "../../modules/persons/pages/person-create-page";
 import { PersonDetailPage } from "../../modules/persons/pages/person-detail-page";
 import { PersonsPage } from "../../modules/persons/pages/persons-page";
@@ -84,6 +89,46 @@ export const router = createBrowserRouter([
             handle: {
               title: "Equipos",
               subtitle: "Alta, edicion y baja logica de equipos"
+            }
+          },
+          {
+            path: "logistics",
+            element: <LogisticsEquipmentPage />,
+            handle: {
+              title: "Logistica",
+              subtitle: "Equipacion, necesidades y stock por temporada"
+            }
+          },
+          {
+            path: "logistics/orders",
+            element: <LogisticsOrdersPage />,
+            handle: {
+              title: "Pedidos",
+              subtitle: "Creacion, envio y recepcion de pedidos al proveedor"
+            }
+          },
+          {
+            path: "logistics/external-recipients",
+            element: <LogisticsExternalRecipientsPage />,
+            handle: {
+              title: "Destinatarios externos",
+              subtitle: "Ficha maestra de destinatarios no ligados a persona"
+            }
+          },
+          {
+            path: "logistics/stock",
+            element: <LogisticsStockPage />,
+            handle: {
+              title: "Stock excedente",
+              subtitle: "Control del excedente fisico del club"
+            }
+          },
+          {
+            path: "logistics/deliveries",
+            element: <LogisticsDeliveriesPage />,
+            handle: {
+              title: "Entregas",
+              subtitle: "Registro operativo de prendas entregadas"
             }
           },
           {

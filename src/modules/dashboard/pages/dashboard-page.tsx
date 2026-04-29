@@ -1,6 +1,7 @@
-import { AutoGraphRounded, GroupsRounded, InfoOutlined, SportsScoreRounded, WarningAmberRounded } from "@mui/icons-material";
+import { AccountBalanceWalletRounded, AutoGraphRounded, GroupsRounded, InfoOutlined, Inventory2Rounded, SportsScoreRounded, WarningAmberRounded } from "@mui/icons-material";
 import {
   Box,
+  Chip,
   CircularProgress,
   Divider,
   Grid2,
@@ -21,13 +22,26 @@ import { KpiCard } from "../../../shared/components/data-display/kpi-card";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
 import { formatMetricValue } from "../../../shared/utils/format-metric-value";
+import { useLogisticsRequests, useLogisticsStockSurplusReviews } from "../../logistics/api/logistics-hooks";
+import { useTreasuryPersons } from "../../treasury/api/treasury-hooks";
 import { useDashboardSummary } from "../api/dashboard-hooks";
 import { PositionSummaryChart } from "../components/position-summary-chart";
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR"
+  }).format(amount);
+}
 
 export function DashboardPage() {
   const [searchParams] = useSearchParams();
   const seasonId = searchParams.get("seasonId");
-  const dashboardQuery = useDashboardSummary(seasonId ? Number(seasonId) : undefined);
+  const selectedSeasonId = seasonId ? Number(seasonId) : undefined;
+  const dashboardQuery = useDashboardSummary(selectedSeasonId);
+  const treasuryQuery = useTreasuryPersons({ seasonId: selectedSeasonId });
+  const logisticsRequestsQuery = useLogisticsRequests(selectedSeasonId);
+  const surplusReviewsQuery = useLogisticsStockSurplusReviews(selectedSeasonId);
 
   if (dashboardQuery.isLoading) {
     return (
@@ -52,6 +66,29 @@ export function DashboardPage() {
 
   const dashboardSummary = dashboardQuery.data;
   const seasonQuery = seasonId ? `?seasonId=${seasonId}` : "";
+  const treasurySummary = (treasuryQuery.data ?? []).reduce(
+    (summary, row) => {
+      summary.pending += row.totalPending;
+      summary.overdue += row.totalOverdue;
+      if (row.totalPending > 0) {
+        summary.personsWithPending += 1;
+      }
+      return summary;
+    },
+    { pending: 0, overdue: 0, personsWithPending: 0 }
+  );
+  const logisticsSummary = (logisticsRequestsQuery.data ?? []).reduce(
+    (summary, request) => {
+      if (request.status === "PENDING_STOCK" || request.status === "PARTIALLY_RESERVED") {
+        summary.pendingOrder += 1;
+      }
+      if (request.status === "RESERVED_FROM_STOCK") {
+        summary.readyToDeliver += 1;
+      }
+      return summary;
+    },
+    { pendingOrder: 0, readyToDeliver: 0 }
+  );
   const checklistLinkByCode: Record<string, string> = {
     PLAYERS_WITHOUT_TEAM: `/assignments${seasonQuery}`,
     INCOMPLETE_PLAYERS: `/sports${seasonQuery}`,
@@ -161,28 +198,56 @@ export function DashboardPage() {
         </Grid2>
 
         <Grid2 container spacing={2.5}>
-          <Grid2 size={{ xs: 12, lg: 4 }}>
-            <SectionCard subtitle="Faltantes rapidos detectados sobre la operativa actual" title="Metrica operativa">
-              <Stack spacing={1.25}>
-                <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-                  <Typography color="text.secondary">Activos sin entreno</Typography>
-                  <Typography fontWeight={700}>{dashboardSummary.activePlayersWithoutTrainingPreference}</Typography>
-                </Stack>
-                <Divider />
-                <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-                  <Typography color="text.secondary">Activos sin partido</Typography>
-                  <Typography fontWeight={700}>{dashboardSummary.activePlayersWithoutMatchPreference}</Typography>
-                </Stack>
-                <Divider />
-                <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-                  <Typography color="text.secondary">Jugadores con observaciones</Typography>
-                  <Typography fontWeight={700}>{dashboardSummary.playersWithObservations}</Typography>
-                </Stack>
-              </Stack>
+          <Grid2 size={{ xs: 12, lg: 8 }}>
+            <SectionCard subtitle="Pulso rapido de cobros y operativa textil de la temporada" title="Tesoreria y logistica">
+              <Grid2 container spacing={2}>
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                  <Stack spacing={1.25} sx={{ border: 1, borderColor: "divider", borderRadius: 3, p: 2 }}>
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                      <AccountBalanceWalletRounded color="primary" fontSize="small" />
+                      <Typography fontWeight={700}>Tesoreria</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                      <Chip label={`${treasurySummary.personsWithPending} personas con saldo`} size="small" />
+                      <Chip color="warning" label={`Vencido ${formatCurrency(treasurySummary.overdue)}`} size="small" variant="outlined" />
+                    </Stack>
+                    <Divider />
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography color="text.secondary">Pendiente total</Typography>
+                      <Typography fontWeight={700}>{formatCurrency(treasurySummary.pending)}</Typography>
+                    </Stack>
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography color="text.secondary">Vencido total</Typography>
+                      <Typography fontWeight={700}>{formatCurrency(treasurySummary.overdue)}</Typography>
+                    </Stack>
+                  </Stack>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                  <Stack spacing={1.25} sx={{ border: 1, borderColor: "divider", borderRadius: 3, p: 2 }}>
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                      <Inventory2Rounded color="primary" fontSize="small" />
+                      <Typography fontWeight={700}>Logistica</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                      <Chip color="warning" label={`${logisticsSummary.pendingOrder} por pedir`} size="small" variant="outlined" />
+                      <Chip color="success" label={`${logisticsSummary.readyToDeliver} para entregar`} size="small" variant="outlined" />
+                    </Stack>
+                    <Divider />
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography color="text.secondary">Pendientes de revision</Typography>
+                      <Typography fontWeight={700}>{surplusReviewsQuery.data?.length ?? 0}</Typography>
+                    </Stack>
+                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                      <Typography color="text.secondary">Solicitudes en curso</Typography>
+                      <Typography fontWeight={700}>{(logisticsRequestsQuery.data ?? []).length}</Typography>
+                    </Stack>
+                  </Stack>
+                </Grid2>
+              </Grid2>
             </SectionCard>
           </Grid2>
 
-          <Grid2 size={{ xs: 12, lg: 8 }}>
+          <Grid2 size={{ xs: 12, lg: 4 }}>
             <SectionCard
               action={<InfoOutlined color="primary" />}
               subtitle="Checklist priorizado para el trabajo diario"
@@ -194,7 +259,7 @@ export function DashboardPage() {
                     key={item.code}
                     disableGutters
                     sx={{
-                      py: 1.35,
+                      py: 0.8,
                       borderTop: index === 0 ? "none" : "1px dashed #D8E0EA"
                     }}
                   >
@@ -212,13 +277,12 @@ export function DashboardPage() {
                     >
                       <ListItemText
                         primary={item.label}
-                        secondary={`Codigo: ${item.code}`}
                         primaryTypographyProps={{ fontWeight: 600 }}
                       />
                       <Box
                         sx={{
-                          minWidth: 46,
-                          height: 46,
+                          minWidth: 38,
+                          height: 38,
                           borderRadius: "50%",
                           display: "grid",
                           placeItems: "center",

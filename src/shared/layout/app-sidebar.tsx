@@ -2,8 +2,12 @@ import {
   AutoGraphRounded,
   AccountBalanceWalletRounded,
   CalendarMonthRounded,
+  ChecklistRounded,
+  CheckroomRounded,
   FlagRounded,
   GroupsRounded,
+  Inventory2Rounded,
+  LocalShippingRounded,
   LogoutRounded,
   SportsSoccerRounded,
   SwapHorizRounded
@@ -49,6 +53,31 @@ const navItems = [
     label: "Tesoreria",
     path: "/treasury",
     icon: <AccountBalanceWalletRounded />
+  },
+  {
+    label: "Logistica",
+    path: "/logistics",
+    icon: <Inventory2Rounded />
+  },
+  {
+    label: "Stock excedente",
+    path: "/logistics/stock",
+    icon: <CheckroomRounded />
+  },
+  {
+    label: "Pedidos",
+    path: "/logistics/orders",
+    icon: <ChecklistRounded />
+  },
+  {
+    label: "Externos",
+    path: "/logistics/external-recipients",
+    icon: <Inventory2Rounded />
+  },
+  {
+    label: "Entregas",
+    path: "/logistics/deliveries",
+    icon: <LocalShippingRounded />
   },
   {
     label: "Temporadas",

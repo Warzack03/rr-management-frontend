@@ -32,7 +32,8 @@ export function AppHeader() {
   const isAssignmentsRoute = location.pathname.startsWith("/assignments");
   const isSportsRoute = location.pathname.startsWith("/sports");
   const isTreasuryRoute = location.pathname.startsWith("/treasury");
-  const hasSeasonContext = isDashboardRoute || isAssignmentsRoute || isSportsRoute || isTreasuryRoute;
+  const isLogisticsRoute = location.pathname.startsWith("/logistics");
+  const hasSeasonContext = isDashboardRoute || isAssignmentsRoute || isSportsRoute || isTreasuryRoute || isLogisticsRoute;
   const seasonId = searchParams.get("seasonId");
 
   const currentSeason = useMemo(() => {

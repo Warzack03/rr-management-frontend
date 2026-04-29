@@ -38,7 +38,7 @@ const seasonSchema = z.object({
 
 const copySchema = z.object({
   sourceSeasonId: z.coerce.number().positive("Selecciona la temporada origen"),
-  modules: z.array(z.enum(["ASSIGNMENTS", "PLAYER_PROFILES"])).min(1, "Selecciona al menos un modulo")
+  modules: z.array(z.enum(["ASSIGNMENTS", "PLAYER_PROFILES", "EQUIPMENT", "STOCK"])).min(1, "Selecciona al menos un modulo")
 });
 
 type SeasonFormValues = z.infer<typeof seasonSchema>;
@@ -46,7 +46,9 @@ type CopyFormValues = z.infer<typeof copySchema>;
 
 const copyModuleOptions: Array<{ value: SeasonCopyModule; label: string }> = [
   { value: "ASSIGNMENTS", label: "Asignaciones" },
-  { value: "PLAYER_PROFILES", label: "Gestion deportiva" }
+  { value: "PLAYER_PROFILES", label: "Gestion deportiva" },
+  { value: "EQUIPMENT", label: "Equipacion" },
+  { value: "STOCK", label: "Stock (snapshot disponible)" }
 ];
 
 function getStatusLabel(status: Season["status"]) {

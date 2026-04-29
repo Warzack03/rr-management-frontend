@@ -110,7 +110,7 @@ export type CreateSeasonPayload = {
 
 export type UpdateSeasonPayload = CreateSeasonPayload;
 
-export type SeasonCopyModule = "ASSIGNMENTS" | "PLAYER_PROFILES";
+export type SeasonCopyModule = "ASSIGNMENTS" | "PLAYER_PROFILES" | "EQUIPMENT" | "STOCK";
 
 export type CopySeasonModulesPayload = {
   sourceSeasonId: number;
@@ -236,7 +236,7 @@ export type PlayerPosition =
 
 export type TrainingPreference =
   | "LUNES_Y_MIERCOLES_16_30_18_00"
-  | "MIERCOLES_20_00_21_00_Y_VIERNES_19_00_21_00"
+  | "MIERCOLES_20_00_21_00_Y_VIERNES_20_30_22_30"
   | "INDIFERENTE";
 
 export type MatchPreference = "SABADO_TARDE" | "DOMINGO_MANANA" | "DOMINGO_TARDE" | "INDIFERENTE";
@@ -453,4 +453,285 @@ export type CreateTreasuryPaymentPayload = {
     obligationId: number;
     amount: number;
   }>;
+};
+
+export type LogisticsKitMode = "PLAYER" | "GOALKEEPER";
+
+export type LogisticsEquipmentStatus = "NO_TEAM" | "INCOMPLETE" | "READY";
+
+export type LogisticsEquipmentSummary = {
+  profileId: number | null;
+  personId: number;
+  fullName: string;
+  nifValue: string;
+  currentTeamId: number | null;
+  currentTeamCode: string | null;
+  currentTeamName: string | null;
+  originTeamId: number | null;
+  originTeamCode: string | null;
+  originTeamName: string | null;
+  kitMode: LogisticsKitMode | null;
+  shirtName: string | null;
+  shirtNumber: number | null;
+  shirtSize: string | null;
+  pantsSize: string | null;
+  jacketSize: string | null;
+  socksSize: string | null;
+  status: LogisticsEquipmentStatus;
+  incomplete: boolean;
+};
+
+export type LogisticsEquipmentDetail = LogisticsEquipmentSummary & {
+  active: boolean;
+  notes: string | null;
+};
+
+export type UpdateLogisticsEquipmentPayload = {
+  kitMode?: LogisticsKitMode | null;
+  shirtName?: string | null;
+  shirtNumber?: number | null;
+  shirtSize?: string | null;
+  pantsSize?: string | null;
+  jacketSize?: string | null;
+  socksSize?: string | null;
+  notes?: string | null;
+};
+
+export type LogisticsGarmentCategory =
+  | "MATCH_SHIRT"
+  | "MATCH_PANTS"
+  | "MATCH_SOCKS"
+  | "TRAINING_SHIRT"
+  | "TRAINING_PANTS"
+  | "TRACK_JACKET"
+  | "TRACK_PANTS";
+
+export type LogisticsRequestType = "BASE" | "EXTRA";
+
+export type LogisticsRequestStatus = "PENDING_STOCK" | "PARTIALLY_RESERVED" | "RESERVED_FROM_STOCK" | "DELIVERED";
+
+export type LogisticsChargeMode = "INCLUDED" | "CHARGEABLE" | "CLUB_ASSUMED";
+
+export type LogisticsStockMovementType = "MANUAL_IN" | "MANUAL_ADJUSTMENT" | "RESERVE" | "RELEASE" | "ORDER_RECEIPT" | "DELIVERY";
+export type LogisticsStockSurplusReviewStatus = "PENDING" | "SENT_TO_STOCK";
+
+export type LogisticsRequest = {
+  id: number;
+  seasonId: number;
+  personId: number | null;
+  fullName: string | null;
+  nifValue: string | null;
+  externalRecipientId: number | null;
+  externalRecipientName: string | null;
+  originTeamId: number | null;
+  originTeamName: string | null;
+  requestType: LogisticsRequestType;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  nameCustomization: string | null;
+  numberCustomization: number | null;
+  quantityRequested: number;
+  quantityReserved: number;
+  quantityDelivered: number;
+  status: LogisticsRequestStatus;
+  chargeMode: LogisticsChargeMode;
+  unitAmount: number;
+  totalAmount: number;
+  treasuryObligationId: number | null;
+  notes: string | null;
+};
+
+export type LogisticsStockBalance = {
+  id: number;
+  seasonId: number;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  personalized: boolean;
+  nameCustomization: string | null;
+  numberCustomization: number | null;
+  quantityAvailable: number;
+  quantityReserved: number;
+  quantityDelivered: number;
+  location: string | null;
+};
+
+export type LogisticsStockMovement = {
+  id: number;
+  stockBalanceId: number;
+  requestId: number | null;
+  movementType: LogisticsStockMovementType;
+  quantity: number;
+  movementDate: string;
+  performedByName: string | null;
+  notes: string | null;
+};
+
+export type LogisticsStockSurplusReview = {
+  id: number;
+  seasonId: number;
+  orderId: number;
+  orderName: string;
+  supplierName: string;
+  orderLineId: number;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  personalized: boolean;
+  nameCustomization: string | null;
+  numberCustomization: number | null;
+  quantity: number;
+  status: LogisticsStockSurplusReviewStatus;
+  stockBalanceId: number | null;
+  processedAt: string | null;
+  notes: string | null;
+};
+
+export type CreateLogisticsRequestPayload = {
+  seasonId: number;
+  personId?: number;
+  externalRecipientId?: number;
+  externalRecipientName?: string;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  quantity: number;
+  chargeMode: LogisticsChargeMode;
+  unitAmount: number;
+  notes?: string;
+};
+
+export type ReserveLogisticsRequestPayload = {
+  quantity?: number;
+};
+
+export type ManualLogisticsStockEntryPayload = {
+  seasonId: number;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  quantity: number;
+  location?: string;
+  notes?: string;
+};
+
+export type ManualLogisticsStockAdjustmentPayload = {
+  stockBalanceId: number;
+  delta: number;
+  notes?: string;
+};
+
+export type LogisticsOrderStatus = "DRAFT" | "SENT" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED";
+
+export type LogisticsSupplierOrderLineRequest = {
+  id: number;
+  requestId: number;
+  recipientName: string | null;
+  quantity: number;
+};
+
+export type LogisticsSupplierOrderLine = {
+  id: number;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  personalized: boolean;
+  nameCustomization: string | null;
+  numberCustomization: number | null;
+  quantityOrdered: number;
+  quantityReceived: number;
+  quantityPending: number;
+  unitPrice: number;
+  notes: string | null;
+  requestAllocations: LogisticsSupplierOrderLineRequest[];
+};
+
+export type LogisticsSupplierOrder = {
+  id: number;
+  seasonId: number;
+  supplierName: string;
+  name: string;
+  orderDate: string;
+  status: LogisticsOrderStatus;
+  subtotal: number;
+  tax: number;
+  total: number;
+  totalQuantityOrdered: number;
+  totalQuantityReceived: number;
+  totalQuantityPending: number;
+  notes: string | null;
+  lines: LogisticsSupplierOrderLine[];
+};
+
+export type CreateLogisticsOrderPayload = {
+  seasonId: number;
+  requestIds: number[];
+  supplierName?: string;
+  name?: string;
+  orderDate?: string;
+  notes?: string;
+};
+
+export type UpdateLogisticsOrderPayload = {
+  supplierName?: string;
+  name?: string;
+  requestIds: number[];
+  notes?: string;
+};
+
+export type RegisterLogisticsOrderReceiptPayload = {
+  receivedAt?: string;
+  location?: string;
+  notes?: string;
+  lines?: Array<{
+    orderLineId: number;
+    quantity: number;
+  }>;
+};
+
+export type LogisticsDeliveryLine = {
+  id: number;
+  requestId: number | null;
+  garmentCategory: LogisticsGarmentCategory;
+  sizeCode: string;
+  quantity: number;
+};
+
+export type LogisticsDelivery = {
+  id: number;
+  seasonId: number;
+  personId: number | null;
+  externalRecipientId: number | null;
+  recipientName: string;
+  deliveredByPersonId: number | null;
+  deliveredByName: string | null;
+  deliveredAt: string;
+  notes: string | null;
+  lines: LogisticsDeliveryLine[];
+};
+
+export type CreateLogisticsDeliveryPayload = {
+  seasonId: number;
+  personId?: number;
+  externalRecipientId?: number;
+  externalRecipientName?: string;
+  deliveredByPersonId?: number;
+  deliveredAt?: string;
+  notes?: string;
+  lines: Array<{
+    requestId: number;
+    quantity: number;
+  }>;
+};
+
+export type LogisticsExternalRecipient = {
+  id: number;
+  fullName: string;
+  address: string;
+  dniValue: string;
+  provenance: string;
+  notes: string | null;
+};
+
+export type UpsertLogisticsExternalRecipientPayload = {
+  fullName: string;
+  address: string;
+  dniValue: string;
+  provenance: string;
+  notes?: string;
 };

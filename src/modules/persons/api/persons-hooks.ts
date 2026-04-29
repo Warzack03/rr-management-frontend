@@ -67,3 +67,18 @@ export function useUpdatePersonMutation(personId: string) {
     }
   });
 }
+
+export function useUpdatePersonByIdMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ personId, payload }: { personId: string; payload: UpdatePersonPayload }) => updatePerson(personId, payload),
+    onSuccess: (person) => {
+      queryClient.invalidateQueries({ queryKey: personsKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "current"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.setQueryData(personsKeys.detail(String(person.id)), person);
+    }
+  });
+}

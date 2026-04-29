@@ -11,7 +11,7 @@ export const playerPositionOptions: Array<{ value: PlayerPosition; label: string
 
 export const trainingPreferenceOptions: Array<{ value: TrainingPreference; label: string }> = [
   { value: "LUNES_Y_MIERCOLES_16_30_18_00", label: "Lunes y Miércoles 16:30-18:00" },
-  { value: "MIERCOLES_20_00_21_00_Y_VIERNES_19_00_21_00", label: "Miércoles 20:00-21:00 y Viernes 19:00-21:00" },
+  { value: "MIERCOLES_20_00_21_00_Y_VIERNES_20_30_22_30", label: "Miércoles 20:00-21:00 y Viernes 20:30-22:30" },
   { value: "INDIFERENTE", label: "Indiferente" }
 ];
 
