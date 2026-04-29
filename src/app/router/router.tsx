@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { Navigate, createHashRouter } from "react-router-dom";
 import { AppShell } from "../../shared/layout/app-shell";
 import { AssignmentsPage } from "../../modules/assignments/pages/assignments-page";
 import { AuthGuard } from "../../modules/auth/components/auth-guard";
@@ -20,7 +20,7 @@ import { TreasuryConfigPage } from "../../modules/treasury/pages/treasury-config
 import { TreasuryPage } from "../../modules/treasury/pages/treasury-page";
 import { TreasuryPersonPage } from "../../modules/treasury/pages/treasury-person-page";
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/login",
     element: <LoginPage />
