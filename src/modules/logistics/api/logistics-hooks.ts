@@ -11,7 +11,7 @@ import type {
   RegisterLogisticsOrderReceiptPayload,
   ReserveLogisticsRequestPayload,
   UpdateLogisticsOrderPayload,
-  UpdateLogisticsEquipmentPayload,
+  UpsertPlayerSeasonGarmentsPayload,
   UpsertLogisticsExternalRecipientPayload
 } from "../../../shared/types/api";
 import {
@@ -24,12 +24,11 @@ import {
   createManualLogisticsStockEntry,
   generateLogisticsBaseRequests,
   getLogisticsDeliveries,
-  getLogisticsEquipment,
-  getLogisticsEquipmentDetail,
   getLogisticsExternalRecipient,
   getLogisticsExternalRecipients,
   getLogisticsOrder,
   getLogisticsOrders,
+  getPlayerSeasonGarments,
   getLogisticsRequests,
   getLogisticsStock,
   getLogisticsStockMovements,
@@ -40,13 +39,13 @@ import {
   sendLogisticsOrder,
   sendLogisticsStockSurplusToStock,
   updateLogisticsOrder,
-  updateLogisticsEquipment,
+  updatePlayerSeasonGarments,
   updateLogisticsExternalRecipient
 } from "./logistics-api";
 
 export const logisticsKeys = {
-  equipment: (seasonId?: number, teamId?: number) => ["logistics", "equipment", seasonId ?? "default", teamId ?? "all"] as const,
-  equipmentDetail: (personId: string, seasonId?: number) => ["logistics", "equipment-detail", personId, seasonId ?? "default"] as const,
+  playerSeasonGarments: (personId?: number, seasonId?: number) =>
+    ["logistics", "player-season-garments", personId ?? "all", seasonId ?? "default"] as const,
   requests: (seasonId?: number, teamId?: number, personId?: number, status?: LogisticsRequestStatus) =>
     ["logistics", "requests", seasonId ?? "default", teamId ?? "all", personId ?? "all", status ?? "all"] as const,
   stock: (seasonId?: number, garmentCategory?: LogisticsGarmentCategory, sizeCode?: string) =>
@@ -59,29 +58,21 @@ export const logisticsKeys = {
   externalRecipient: (id: number) => ["logistics", "external-recipient", id] as const
 };
 
-export function useLogisticsEquipment(seasonId?: number, teamId?: number) {
+export function usePlayerSeasonGarments(personId?: number, seasonId?: number) {
   return useQuery({
-    queryKey: logisticsKeys.equipment(seasonId, teamId),
-    queryFn: ({ signal }) => getLogisticsEquipment({ seasonId, teamId, signal })
-  });
-}
-
-export function useLogisticsEquipmentDetail(personId: string, seasonId?: number) {
-  return useQuery({
-    queryKey: logisticsKeys.equipmentDetail(personId, seasonId),
-    queryFn: ({ signal }) => getLogisticsEquipmentDetail(personId, seasonId, signal),
+    queryKey: logisticsKeys.playerSeasonGarments(personId, seasonId),
+    queryFn: ({ signal }) => getPlayerSeasonGarments({ personId, seasonId, signal }),
     enabled: Boolean(personId)
   });
 }
 
-export function useUpdateLogisticsEquipmentMutation(personId: string, seasonId?: number) {
+export function useUpdatePlayerSeasonGarmentsMutation(personId?: number, seasonId?: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdateLogisticsEquipmentPayload) => updateLogisticsEquipment(personId, payload, seasonId),
-    onSuccess: (detail) => {
-      queryClient.setQueryData(logisticsKeys.equipmentDetail(personId, seasonId), detail);
-      queryClient.invalidateQueries({ queryKey: ["logistics", "equipment"] });
+    mutationFn: (payload: UpsertPlayerSeasonGarmentsPayload) => updatePlayerSeasonGarments(personId as number, payload, seasonId),
+    onSuccess: (garments) => {
+      queryClient.setQueryData(logisticsKeys.playerSeasonGarments(personId, seasonId), garments);
     }
   });
 }

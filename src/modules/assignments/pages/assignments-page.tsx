@@ -18,7 +18,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -79,6 +79,8 @@ export function AssignmentsPage() {
   const [currentSearch, setCurrentSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingPage, setPendingPage] = useState(1);
+  const actionPanelRef = useRef<HTMLDivElement | null>(null);
+  const teamFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const form = useForm<AssignmentActionValues>({
     resolver: zodResolver(assignmentActionSchema),
     defaultValues: {
@@ -114,6 +116,17 @@ export function AssignmentsPage() {
     setCurrentPage(1);
     setPendingPage(1);
   }, [selectedSeasonId]);
+
+  useEffect(() => {
+    if (!selectedTarget) {
+      return;
+    }
+
+    actionPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      teamFieldRef.current?.focus();
+    }, 150);
+  }, [selectedTarget]);
 
   if (isLoading) {
     return (
@@ -394,7 +407,7 @@ export function AssignmentsPage() {
             </Stack>
           </Grid2>
 
-          <Grid2 size={{ xs: 12, xl: 4.5 }}>
+          <Grid2 ref={actionPanelRef} size={{ xs: 12, xl: 4.5 }}>
             <SectionCard
               action={<SwapHorizRounded color="primary" />}
               subtitle="El equipo es obligatorio. La temporada viene dada por el contexto seleccionado y la fecha es opcional."
@@ -426,6 +439,7 @@ export function AssignmentsPage() {
                     error={!!form.formState.errors.teamId}
                     fullWidth
                     helperText={form.formState.errors.teamId?.message}
+                    inputRef={teamFieldRef}
                     label="Equipo destino"
                     required
                     select

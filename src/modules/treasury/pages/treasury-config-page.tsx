@@ -77,7 +77,6 @@ export function TreasuryConfigPage() {
   const config = configQuery.data;
   const groupedRuleSummaries = Object.values(
     config.rules
-      .filter((rule) => rule.conceptCode !== "EXTRA_EQUIPMENT")
       .reduce<Record<string, { economicBlockCode: string; playerConditionLabel: string; totalAmount: number }>>((acc, rule) => {
         const key = `${rule.economicBlockId}-${rule.playerCondition}`;
         const currentRule = rules[`${rule.economicBlockId}-${rule.playerCondition}-${rule.conceptCode}`] ?? {

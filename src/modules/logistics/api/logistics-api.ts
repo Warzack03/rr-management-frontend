@@ -4,10 +4,9 @@ import type {
   CreateLogisticsRequestPayload,
   CreateLogisticsDeliveryPayload,
   CreateLogisticsOrderPayload,
-  LogisticsEquipmentDetail,
-  LogisticsEquipmentSummary,
   LogisticsDelivery,
   LogisticsGarmentCategory,
+  PlayerSeasonGarment,
   LogisticsRequest,
   LogisticsRequestStatus,
   LogisticsSupplierOrder,
@@ -19,32 +18,35 @@ import type {
   RegisterLogisticsOrderReceiptPayload,
   ReserveLogisticsRequestPayload,
   UpdateLogisticsOrderPayload,
-  UpdateLogisticsEquipmentPayload,
+  UpsertPlayerSeasonGarmentsPayload,
   UpsertLogisticsExternalRecipientPayload
 } from "../../../shared/types/api";
 
-export function getLogisticsEquipment(params: { seasonId?: number; teamId?: number; signal?: AbortSignal }) {
+export function getPlayerSeasonGarments(params: { personId?: number; seasonId?: number; teamCode?: string; signal?: AbortSignal }) {
   const query = new URLSearchParams();
+  if (params.personId) {
+    query.set("personId", String(params.personId));
+  }
   if (params.seasonId) {
     query.set("seasonId", String(params.seasonId));
   }
-  if (params.teamId) {
-    query.set("teamId", String(params.teamId));
+  if (params.teamCode) {
+    query.set("teamCode", params.teamCode);
   }
 
-  return httpClient<LogisticsEquipmentSummary[]>(`/logistics/equipment${query.size > 0 ? `?${query.toString()}` : ""}`, {
+  return httpClient<PlayerSeasonGarment[]>(`/logistics/player-season-garments${query.size > 0 ? `?${query.toString()}` : ""}`, {
     signal: params.signal
   });
 }
 
-export function getLogisticsEquipmentDetail(personId: string, seasonId?: number, signal?: AbortSignal) {
-  const query = seasonId ? `?seasonId=${seasonId}` : "";
-  return httpClient<LogisticsEquipmentDetail>(`/logistics/equipment/${personId}${query}`, { signal });
-}
+export function updatePlayerSeasonGarments(personId: number, payload: UpsertPlayerSeasonGarmentsPayload, seasonId?: number) {
+  const query = new URLSearchParams();
+  query.set("personId", String(personId));
+  if (seasonId) {
+    query.set("seasonId", String(seasonId));
+  }
 
-export function updateLogisticsEquipment(personId: string, payload: UpdateLogisticsEquipmentPayload, seasonId?: number) {
-  const query = seasonId ? `?seasonId=${seasonId}` : "";
-  return httpClient<LogisticsEquipmentDetail>(`/logistics/equipment/${personId}${query}`, {
+  return httpClient<PlayerSeasonGarment[]>(`/logistics/player-season-garments?${query.toString()}`, {
     method: "PUT",
     body: payload
   });

@@ -1,20 +1,32 @@
 import type {
-  LogisticsEquipmentStatus,
   LogisticsGarmentCategory,
-  LogisticsKitMode,
   LogisticsOrderStatus,
   LogisticsRequestStatus,
-  LogisticsStockMovementType
+  LogisticsStockMovementType,
+  PlayerSeasonGarmentType,
+  SleeveType
 } from "../../../shared/types/api";
-
-export const logisticsKitModeOptions: Array<{ value: LogisticsKitMode; label: string }> = [
-  { value: "PLAYER", label: "Jugador" },
-  { value: "GOALKEEPER", label: "Portero" }
-];
 
 export const logisticsApparelSizeOptions = ["2A", "4A", "6A", "8A", "10A", "12A", "XS", "S", "M", "L", "XL", "2XL", "3XL"] as const;
 
 export const logisticsSocksSizeOptions = ["39-42", "43-45", "46-48"] as const;
+
+export const playerSeasonGarmentTypeOptions: Array<{ value: PlayerSeasonGarmentType; label: string }> = [
+  { value: "PLAYER_MATCH_SHIRT", label: "Camiseta partido jugador" },
+  { value: "PLAYER_MATCH_SHORTS", label: "Pantalon partido jugador" },
+  { value: "TRAINING_SHIRT", label: "Camiseta entreno" },
+  { value: "TRAINING_SHORTS", label: "Pantalon entreno" },
+  { value: "TRACKSUIT_PANTS", label: "Pantalon chandal" },
+  { value: "JACKET", label: "Chaqueta" },
+  { value: "SOCKS", label: "Calcetines" },
+  { value: "GOALKEEPER_MATCH_SHIRT", label: "Camiseta partido portero" },
+  { value: "GOALKEEPER_MATCH_SHORTS", label: "Pantalon partido portero" }
+];
+
+export const sleeveTypeOptions: Array<{ value: SleeveType; label: string }> = [
+  { value: "SHORT", label: "Corta" },
+  { value: "LONG", label: "Larga" }
+];
 
 export const logisticsGarmentOptions: Array<{ value: LogisticsGarmentCategory; label: string }> = [
   { value: "MATCH_SHIRT", label: "Camiseta partido" },
@@ -33,49 +45,23 @@ export const logisticsRequestStatusOptions: Array<{ value: LogisticsRequestStatu
   { value: "DELIVERED", label: "Entregado" }
 ];
 
-export function getLogisticsStatusLabel(status: LogisticsEquipmentStatus) {
-  switch (status) {
-    case "NO_TEAM":
-      return "Sin equipo";
-    case "INCOMPLETE":
-      return "Sin configurar";
-    case "READY":
-      return "Lista";
-    default:
-      return status;
-  }
-}
-
-export function getLogisticsStatusColor(status: LogisticsEquipmentStatus): "default" | "warning" | "success" {
-  switch (status) {
-    case "NO_TEAM":
-      return "default";
-    case "INCOMPLETE":
-      return "warning";
-    case "READY":
-      return "success";
-    default:
-      return "default";
-  }
-}
-
-export function getLogisticsKitModeLabel(value: LogisticsKitMode | null) {
-  switch (value) {
-    case "PLAYER":
-      return "Jugador";
-    case "GOALKEEPER":
-      return "Portero";
-    default:
-      return "Sin definir";
-  }
-}
-
 export function getLogisticsGarmentLabel(value: LogisticsGarmentCategory) {
   return logisticsGarmentOptions.find((option) => option.value === value)?.label ?? value;
 }
 
 export function getLogisticsRequestStatusLabel(value: LogisticsRequestStatus) {
   return logisticsRequestStatusOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+export function getPlayerSeasonGarmentTypeLabel(value: PlayerSeasonGarmentType) {
+  return playerSeasonGarmentTypeOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+export function getSleeveTypeLabel(value: SleeveType | null) {
+  if (!value) {
+    return "No aplica";
+  }
+  return sleeveTypeOptions.find((option) => option.value === value)?.label ?? value;
 }
 
 export function getLogisticsRequestStatusColor(value: LogisticsRequestStatus): "default" | "warning" | "success" {

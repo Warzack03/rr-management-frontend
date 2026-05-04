@@ -1,13 +1,13 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AddRounded, CheckroomRounded, SearchRounded } from "@mui/icons-material";
+import { AddRounded, CheckroomRounded, DeleteOutlineRounded, SearchRounded } from "@mui/icons-material";
 import {
   Alert,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
-  Divider,
   FormControlLabel,
   Grid2,
+  IconButton,
   InputAdornment,
   List,
   ListItemButton,
@@ -25,61 +25,67 @@ import {
   Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Link, useSearchParams } from "react-router-dom";
-import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
 import { useAppFeedback } from "../../../shared/components/feedback/app-feedback-provider";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { SectionCard } from "../../../shared/components/data-display/section-card";
 import { PageContainer } from "../../../shared/layout/page-container";
 import type {
+  CurrentTeamAssignment,
   LogisticsChargeMode,
   LogisticsGarmentCategory,
-  LogisticsKitMode,
-  LogisticsRequestStatus
+  LogisticsRequestStatus,
+  PendingTeamAssignment,
+  PlayerSeasonGarment,
+  PlayerSeasonGarmentType,
+  SleeveType
 } from "../../../shared/types/api";
 import { normalizeSearchText } from "../../../shared/utils/normalize-search-text";
+import { useCurrentAssignments, usePendingAssignments } from "../../assignments/api/assignments-hooks";
 import { useActiveTeams } from "../../teams/api/teams-hooks";
 import {
   useCreateLogisticsRequestMutation,
   useGenerateBaseRequestsMutation,
   useLogisticsExternalRecipients,
-  useLogisticsEquipment,
-  useLogisticsEquipmentDetail,
+  usePlayerSeasonGarments,
   useLogisticsRequests,
-  useUpdateLogisticsEquipmentMutation
+  useUpdatePlayerSeasonGarmentsMutation
 } from "../api/logistics-hooks";
 import {
   getLogisticsGarmentLabel,
-  getLogisticsKitModeLabel,
   getLogisticsRequestStatusColor,
   getLogisticsRequestStatusLabel,
-  getLogisticsStatusColor,
-  getLogisticsStatusLabel,
   logisticsApparelSizeOptions,
   logisticsGarmentOptions,
-  logisticsKitModeOptions,
   logisticsRequestStatusOptions,
-  logisticsSocksSizeOptions
+  logisticsSocksSizeOptions,
+  playerSeasonGarmentTypeOptions,
+  sleeveTypeOptions
 } from "../model/logistics-ui";
 
 const PAGE_SIZE = 10;
 
-const equipmentFormSchema = z.object({
-  kitMode: z.enum(["PLAYER", "GOALKEEPER"]).nullable(),
-  shirtName: z.string().optional(),
-  shirtNumber: z.union([z.coerce.number().int().positive("Debe ser positivo"), z.null()]),
-  shirtSize: z.string().nullable(),
-  pantsSize: z.string().nullable(),
-  jacketSize: z.string().nullable(),
-  socksSize: z.string().nullable(),
-  notes: z.string().optional()
-});
-
-type EquipmentFormValues = z.infer<typeof equipmentFormSchema>;
-
 type RequestRecipientMode = "PERSON" | "EXTERNAL";
+type RosterRow = {
+  personId: number;
+  fullName: string;
+  nifValue: string;
+  currentTeamName: string | null;
+};
+type GarmentDraft = {
+  localId: string;
+  id?: number;
+  garmentType: PlayerSeasonGarmentType;
+  size: string;
+  quantity: string;
+  hasItem: boolean;
+  isKept: boolean | null;
+  needsItem: boolean | null;
+  isExtra: boolean;
+  notes: string;
+  sleeveType: SleeveType | null;
+};
 
 function getErrorMessage(error: unknown) {
   if (error instanceof HttpClientError) {
@@ -93,6 +99,59 @@ function getErrorMessage(error: unknown) {
 
 function isSocksCategory(garmentCategory: LogisticsGarmentCategory) {
   return garmentCategory === "MATCH_SOCKS";
+}
+
+function supportsSleeveType(garmentType: PlayerSeasonGarmentType) {
+  return garmentType === "PLAYER_MATCH_SHIRT" || garmentType === "TRAINING_SHIRT" || garmentType === "GOALKEEPER_MATCH_SHIRT";
+}
+
+function cycleTriStateValue(value: boolean | null): boolean | null {
+  if (value === null) {
+    return true;
+  }
+  if (value === true) {
+    return false;
+  }
+  return null;
+}
+
+function getSizeOptionsForGarmentType(garmentType: PlayerSeasonGarmentType, currentSize: string) {
+  const baseOptions: string[] = garmentType === "SOCKS" ? [...logisticsSocksSizeOptions] : [...logisticsApparelSizeOptions];
+  if (currentSize && !baseOptions.includes(currentSize)) {
+    return [currentSize, ...baseOptions];
+  }
+  return baseOptions;
+}
+
+function toGarmentDraft(garment: PlayerSeasonGarment, index: number): GarmentDraft {
+  return {
+    localId: `${garment.id}-${index}`,
+    id: garment.id,
+    garmentType: garment.garmentType,
+    size: garment.size ?? "",
+    quantity: String(garment.quantity),
+    hasItem: garment.hasItem,
+    isKept: garment.isKept,
+    needsItem: garment.needsItem,
+    isExtra: garment.isExtra,
+    notes: garment.notes ?? "",
+    sleeveType: garment.sleeveType
+  };
+}
+
+function createEmptyGarmentDraft(): GarmentDraft {
+  return {
+    localId: `new-${crypto.randomUUID()}`,
+    garmentType: "PLAYER_MATCH_SHIRT",
+    size: "",
+    quantity: "1",
+    hasItem: false,
+    isKept: null,
+    needsItem: null,
+    isExtra: false,
+    notes: "",
+    sleeveType: null
+  };
 }
 
 export function LogisticsEquipmentPage() {
@@ -117,28 +176,37 @@ export function LogisticsEquipmentPage() {
   const [extraChargeMode, setExtraChargeMode] = useState<LogisticsChargeMode>("CHARGEABLE");
   const [extraUnitAmount, setExtraUnitAmount] = useState<string>("0");
   const [extraNotes, setExtraNotes] = useState("");
-
-  const form = useForm<EquipmentFormValues>({
-    resolver: zodResolver(equipmentFormSchema),
-    defaultValues: {
-      kitMode: null,
-      shirtName: "",
-      shirtNumber: null,
-      shirtSize: null,
-      pantsSize: null,
-      jacketSize: null,
-      socksSize: null,
-      notes: ""
-    }
-  });
+  const [garmentDrafts, setGarmentDrafts] = useState<GarmentDraft[]>([]);
 
   const activeTeamsQuery = useActiveTeams();
+  const currentAssignmentsQuery = useCurrentAssignments(selectedSeasonId);
+  const pendingAssignmentsQuery = usePendingAssignments(selectedSeasonId);
   const externalRecipientsQuery = useLogisticsExternalRecipients();
   const selectedTeamId = teamFilter === "ALL" ? undefined : Number(teamFilter);
   const selectedPersonNumberId = selectedPersonId ? Number(selectedPersonId) : undefined;
-  const equipmentQuery = useLogisticsEquipment(selectedSeasonId, selectedTeamId);
   const filteredRows = useMemo(() => {
-    const rows = equipmentQuery.data ?? [];
+    const currentRows: RosterRow[] = (currentAssignmentsQuery.data ?? [])
+      .filter((assignment: CurrentTeamAssignment) => assignment.person.roles.includes("JUGADOR"))
+      .filter((assignment: CurrentTeamAssignment) => (selectedTeamId ? assignment.team.id === selectedTeamId : true))
+      .map((assignment: CurrentTeamAssignment) => ({
+        personId: assignment.person.id,
+        fullName: `${assignment.person.firstName} ${assignment.person.lastName}`.trim(),
+        nifValue: assignment.person.nifValue,
+        currentTeamName: assignment.team.name
+      }));
+
+    const pendingRows: RosterRow[] = selectedTeamId
+      ? []
+      : (pendingAssignmentsQuery.data ?? [])
+          .filter((person: PendingTeamAssignment) => person.roles.includes("JUGADOR"))
+          .map((person: PendingTeamAssignment) => ({
+            personId: person.personId,
+            fullName: `${person.firstName} ${person.lastName}`.trim(),
+            nifValue: person.nifValue,
+            currentTeamName: null
+          }));
+
+    const rows = [...currentRows, ...pendingRows];
     const normalizedSearch = normalizeSearchText(search);
     if (!normalizedSearch) {
       return rows;
@@ -150,13 +218,17 @@ export function LogisticsEquipmentPage() {
         normalizeSearchText(row.nifValue).includes(normalizedSearch)
       );
     });
-  }, [equipmentQuery.data, search]);
+  }, [currentAssignmentsQuery.data, pendingAssignmentsQuery.data, search, selectedTeamId]);
 
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const paginatedRows = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
     return filteredRows.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredRows, page]);
+  const selectedRosterRow = useMemo(
+    () => filteredRows.find((row) => String(row.personId) === selectedPersonId) ?? null,
+    [filteredRows, selectedPersonId]
+  );
 
   useEffect(() => {
     setPage(1);
@@ -172,8 +244,8 @@ export function LogisticsEquipmentPage() {
     }
   }, [filteredRows, selectedPersonId]);
 
-  const detailQuery = useLogisticsEquipmentDetail(selectedPersonId, selectedSeasonId);
-  const updateMutation = useUpdateLogisticsEquipmentMutation(selectedPersonId, selectedSeasonId);
+  const garmentsQuery = usePlayerSeasonGarments(selectedPersonNumberId, selectedSeasonId);
+  const updateGarmentsMutation = useUpdatePlayerSeasonGarmentsMutation(selectedPersonNumberId, selectedSeasonId);
   const requestsQuery = useLogisticsRequests(
     selectedSeasonId,
     selectedTeamId,
@@ -184,62 +256,58 @@ export function LogisticsEquipmentPage() {
   const createExtraRequestMutation = useCreateLogisticsRequestMutation();
 
   useEffect(() => {
-    if (!detailQuery.data) {
-      return;
-    }
+    setGarmentDrafts((garmentsQuery.data ?? []).map(toGarmentDraft));
+  }, [garmentsQuery.data]);
 
-    form.reset({
-      kitMode: detailQuery.data.kitMode,
-      shirtName: detailQuery.data.shirtName ?? "",
-      shirtNumber: detailQuery.data.shirtNumber,
-      shirtSize: detailQuery.data.shirtSize,
-      pantsSize: detailQuery.data.pantsSize,
-      jacketSize: detailQuery.data.jacketSize,
-      socksSize: detailQuery.data.socksSize,
-      notes: detailQuery.data.notes ?? ""
-    });
-  }, [detailQuery.data, form]);
-
-  const loadingBase = activeTeamsQuery.isLoading || equipmentQuery.isLoading;
-  const errorBase = activeTeamsQuery.isError || equipmentQuery.isError;
-  const updateError = getErrorMessage(updateMutation.error);
+  const loadingBase = activeTeamsQuery.isLoading || currentAssignmentsQuery.isLoading || pendingAssignmentsQuery.isLoading;
+  const errorBase = activeTeamsQuery.isError || currentAssignmentsQuery.isError || pendingAssignmentsQuery.isError;
+  const garmentsError = getErrorMessage(garmentsQuery.error) ?? getErrorMessage(updateGarmentsMutation.error);
   const requestError = getErrorMessage(requestsQuery.error) ?? getErrorMessage(createExtraRequestMutation.error);
   const extraSizeOptions = isSocksCategory(extraGarmentCategory) ? logisticsSocksSizeOptions : logisticsApparelSizeOptions;
 
-  const resetEquipmentForm = () => {
-    if (!detailQuery.data) {
-      return;
-    }
-    form.reset({
-      kitMode: detailQuery.data.kitMode,
-      shirtName: detailQuery.data.shirtName ?? "",
-      shirtNumber: detailQuery.data.shirtNumber,
-      shirtSize: detailQuery.data.shirtSize,
-      pantsSize: detailQuery.data.pantsSize,
-      jacketSize: detailQuery.data.jacketSize,
-      socksSize: detailQuery.data.socksSize,
-      notes: detailQuery.data.notes ?? ""
-    });
+  const resetGarmentDrafts = () => {
+    setGarmentDrafts((garmentsQuery.data ?? []).map(toGarmentDraft));
   };
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    if (!selectedPersonId) {
+  const updateGarmentDraft = (localId: string, updater: (current: GarmentDraft) => GarmentDraft) => {
+    setGarmentDrafts((current) => current.map((draft) => (draft.localId === localId ? updater(draft) : draft)));
+  };
+
+  const removeGarmentDraft = (localId: string) => {
+    setGarmentDrafts((current) => current.filter((draft) => draft.localId !== localId));
+  };
+
+  const handleSaveGarments = async () => {
+    if (!selectedPersonNumberId) {
       return;
     }
 
-    await updateMutation.mutateAsync({
-      kitMode: values.kitMode,
-      shirtName: values.shirtName?.trim() ? values.shirtName.trim() : null,
-      shirtNumber: values.shirtNumber,
-      shirtSize: values.shirtSize,
-      pantsSize: values.pantsSize,
-      jacketSize: values.jacketSize,
-      socksSize: values.socksSize,
-      notes: values.notes?.trim() ? values.notes.trim() : null
+    const normalizedGarments = garmentDrafts.map((draft, index) => {
+      const quantity = Number(draft.quantity);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        throw new Error(`La cantidad de la fila ${index + 1} debe ser un entero mayor que cero.`);
+      }
+
+      return {
+        id: draft.id,
+        garmentType: draft.garmentType,
+        size: draft.size.trim() ? draft.size.trim() : null,
+        quantity,
+        hasItem: draft.hasItem,
+        isKept: draft.isKept,
+        needsItem: draft.needsItem,
+        isExtra: draft.isExtra,
+        notes: draft.notes.trim() ? draft.notes.trim() : null,
+        sleeveType: supportsSleeveType(draft.garmentType) ? draft.sleeveType : null
+      };
     });
 
-    showSuccess("Perfil de equipacion guardado correctamente.");
-  });
+    await updateGarmentsMutation.mutateAsync({
+      garments: normalizedGarments
+    });
+
+    showSuccess("Prendas por temporada guardadas correctamente.");
+  };
 
   const handleGenerateBaseRequests = async () => {
     const rows = await generateBaseRequestsMutation.mutateAsync();
@@ -320,7 +388,7 @@ export function LogisticsEquipmentPage() {
     );
   }
 
-  if (errorBase || !equipmentQuery.data || !activeTeamsQuery.data) {
+  if (errorBase || !activeTeamsQuery.data) {
     return (
       <PageContainer eyebrow="Logistica por temporada" title="Equipacion">
         <EmptyState
@@ -395,10 +463,6 @@ export function LogisticsEquipmentPage() {
                             <Typography color="text.secondary" variant="body2">
                               {row.currentTeamName ?? "Sin equipo en la temporada"}
                             </Typography>
-                            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                              <Chip color={getLogisticsStatusColor(row.status)} label={getLogisticsStatusLabel(row.status)} size="small" />
-                              {row.kitMode && <Chip label={getLogisticsKitModeLabel(row.kitMode)} size="small" variant="outlined" />}
-                            </Stack>
                           </Stack>
                         )}
                         primaryTypographyProps={{ fontWeight: 600 }}
@@ -423,180 +487,245 @@ export function LogisticsEquipmentPage() {
               description="Selecciona un jugador de la columna izquierda para configurar su equipacion."
               title="Sin jugador seleccionado"
             />
-          ) : detailQuery.isLoading ? (
-            <SectionCard subtitle="Cargando la ficha textil del jugador seleccionado" title="Perfil de equipacion">
-              <Stack sx={{ minHeight: 240, alignItems: "center", justifyContent: "center" }}>
-                <CircularProgress />
-              </Stack>
-            </SectionCard>
-          ) : detailQuery.isError || !detailQuery.data ? (
+          ) : !selectedRosterRow ? (
             <EmptyState
-              description="No hemos podido cargar la ficha de equipacion para este jugador."
-              title="Ficha no disponible"
+              description="El jugador seleccionado ya no esta visible con el filtro actual."
+              title="Seleccion no disponible"
             />
           ) : (
-            <Stack component="form" noValidate onSubmit={onSubmit} spacing={3}>
-              {updateError && <Alert severity="error">{updateError}</Alert>}
-
+            <Stack spacing={3}>
               <SectionCard
-                subtitle="Resumen actual del perfil textil en la temporada seleccionada"
-                title={detailQuery.data.fullName}
+                subtitle="Resumen del jugador y del contexto de temporada sobre el que editas las prendas."
+                title={selectedRosterRow.fullName}
               >
                 <Stack spacing={1.5}>
                   <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                    <Chip color={getLogisticsStatusColor(detailQuery.data.status)} label={getLogisticsStatusLabel(detailQuery.data.status)} />
-                    <Chip label={detailQuery.data.currentTeamName ?? "Sin equipo"} variant="outlined" />
-                    <Chip label={`Origen: ${detailQuery.data.originTeamName ?? "Sin origen"}`} variant="outlined" />
-                    <Chip label={getLogisticsKitModeLabel(detailQuery.data.kitMode)} variant="outlined" />
+                    <Chip label={selectedRosterRow.currentTeamName ?? "Sin equipo"} variant="outlined" />
+                    <Chip
+                      label={garmentsQuery.data ? `${garmentsQuery.data.length} prendas cargadas` : "Sin datos de prendas"}
+                      variant="outlined"
+                    />
                   </Stack>
                   <Grid2 container spacing={2}>
-                    <Grid2 size={{ xs: 12, md: 3 }}>
-                      <Typography color="text.secondary" variant="body2">Nombre camiseta</Typography>
-                      <Typography>{detailQuery.data.shirtName ?? "--"}</Typography>
+                    <Grid2 size={{ xs: 12, md: 4 }}>
+                      <Typography color="text.secondary" variant="body2">NIF</Typography>
+                      <Typography>{selectedRosterRow.nifValue}</Typography>
                     </Grid2>
-                    <Grid2 size={{ xs: 12, md: 3 }}>
-                      <Typography color="text.secondary" variant="body2">Dorsal</Typography>
-                      <Typography>{detailQuery.data.shirtNumber ?? "--"}</Typography>
+                    <Grid2 size={{ xs: 12, md: 4 }}>
+                      <Typography color="text.secondary" variant="body2">Temporada</Typography>
+                      <Typography>{selectedSeasonId ?? "Actual"}</Typography>
                     </Grid2>
-                    <Grid2 size={{ xs: 12, md: 3 }}>
-                      <Typography color="text.secondary" variant="body2">Talla camisetas</Typography>
-                      <Typography>{detailQuery.data.shirtSize ?? "--"}</Typography>
-                    </Grid2>
-                    <Grid2 size={{ xs: 12, md: 3 }}>
-                      <Typography color="text.secondary" variant="body2">Talla medias</Typography>
-                      <Typography>{detailQuery.data.socksSize ?? "--"}</Typography>
+                    <Grid2 size={{ xs: 12, md: 4 }}>
+                      <Typography color="text.secondary" variant="body2">Modelo activo</Typography>
+                      <Typography>player_season_garments</Typography>
                     </Grid2>
                   </Grid2>
                 </Stack>
               </SectionCard>
 
-              <SectionCard subtitle="Completa o ajusta tallas, nombre y dorsal sin salir de la mesa de trabajo" title="Editar equipacion">
-                <Grid2 container spacing={2}>
-                  <Grid2 size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      fullWidth
-                      label="Modo"
-                      select
-                      value={form.watch("kitMode") ?? ""}
-                      onChange={(event) =>
-                        form.setValue("kitMode", (event.target.value || null) as LogisticsKitMode | null, { shouldDirty: true })
-                      }
-                    >
-                      <MenuItem value="">Sin definir</MenuItem>
-                      {logisticsKitModeOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid2>
-                  <Grid2 size={{ xs: 12, md: 4 }}>
-                    <TextField fullWidth label="Nombre camiseta" {...form.register("shirtName")} />
-                  </Grid2>
-                  <Grid2 size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      error={!!form.formState.errors.shirtNumber}
-                      fullWidth
-                      helperText={form.formState.errors.shirtNumber?.message}
-                      label="Dorsal"
-                      type="number"
-                      value={form.watch("shirtNumber") ?? ""}
-                      onChange={(event) =>
-                        form.setValue("shirtNumber", event.target.value === "" ? null : Number(event.target.value), {
-                          shouldDirty: true,
-                          shouldValidate: true
-                        })
-                      }
+              <SectionCard
+                subtitle="Modelo final por persona y temporada. Permite varias prendas, extras y estados nulos."
+                title="Prendas por temporada"
+              >
+                <Stack spacing={2}>
+                  {garmentsError && <Alert severity="error">{garmentsError}</Alert>}
+
+                  {garmentsQuery.isLoading ? (
+                    <Stack sx={{ minHeight: 180, alignItems: "center", justifyContent: "center" }}>
+                      <CircularProgress size={24} />
+                    </Stack>
+                  ) : garmentsQuery.isError ? (
+                    <EmptyState
+                      description="No hemos podido cargar las prendas del nuevo modelo para esta persona."
+                      title="Prendas no disponibles"
                     />
-                  </Grid2>
+                  ) : (
+                    <>
+                      <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ justifyContent: "space-between" }}>
+                        <Typography color="text.secondary" variant="body2">
+                          {garmentDrafts.length === 0
+                            ? "Todavia no hay prendas cargadas para este jugador en la temporada."
+                            : `${garmentDrafts.length} prendas editables en el modelo final.`}
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <Button onClick={() => setGarmentDrafts((current) => [...current, createEmptyGarmentDraft()])} variant="outlined">
+                            Anadir prenda
+                          </Button>
+                          <Button onClick={resetGarmentDrafts} variant="outlined">
+                            Revertir
+                          </Button>
+                          <Button disabled={updateGarmentsMutation.isPending} onClick={handleSaveGarments} variant="contained">
+                            Guardar prendas
+                          </Button>
+                        </Stack>
+                      </Stack>
 
-                  <Grid2 size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      label="Talla camisetas"
-                      select
-                      value={form.watch("shirtSize") ?? ""}
-                      onChange={(event) => form.setValue("shirtSize", event.target.value || null, { shouldDirty: true })}
-                    >
-                      <MenuItem value="">Sin informar</MenuItem>
-                      {logisticsApparelSizeOptions.map((size) => (
-                        <MenuItem key={size} value={size}>
-                          {size}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid2>
-                  <Grid2 size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      label="Talla pantalones"
-                      select
-                      value={form.watch("pantsSize") ?? ""}
-                      onChange={(event) => form.setValue("pantsSize", event.target.value || null, { shouldDirty: true })}
-                    >
-                      <MenuItem value="">Sin informar</MenuItem>
-                      {logisticsApparelSizeOptions.map((size) => (
-                        <MenuItem key={size} value={size}>
-                          {size}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid2>
-                  <Grid2 size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      label="Talla chaquetas"
-                      select
-                      value={form.watch("jacketSize") ?? ""}
-                      onChange={(event) => form.setValue("jacketSize", event.target.value || null, { shouldDirty: true })}
-                    >
-                      <MenuItem value="">Sin informar</MenuItem>
-                      {logisticsApparelSizeOptions.map((size) => (
-                        <MenuItem key={size} value={size}>
-                          {size}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid2>
-                  <Grid2 size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      label="Talla medias"
-                      select
-                      value={form.watch("socksSize") ?? ""}
-                      onChange={(event) => form.setValue("socksSize", event.target.value || null, { shouldDirty: true })}
-                    >
-                      <MenuItem value="">Sin informar</MenuItem>
-                      {logisticsSocksSizeOptions.map((size) => (
-                        <MenuItem key={size} value={size}>
-                          {size}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid2>
+                      {garmentDrafts.length === 0 ? (
+                        <EmptyState
+                          description="Puedes crear aqui la primera prenda del modelo final para esta persona y temporada."
+                          title="Sin prendas"
+                        />
+                      ) : (
+                        <Stack sx={{ overflowX: "auto" }}>
+                          <Table size="small" sx={{ minWidth: 1120 }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Prenda</TableCell>
+                                <TableCell>Talla</TableCell>
+                                <TableCell>Cant.</TableCell>
+                                <TableCell align="center">La tiene</TableCell>
+                                <TableCell align="center">Se conserva</TableCell>
+                                <TableCell align="center">Se necesita</TableCell>
+                                <TableCell align="center">Extra</TableCell>
+                                <TableCell>Manga</TableCell>
+                                <TableCell>Notas</TableCell>
+                                <TableCell align="center">Accion</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {garmentDrafts.map((draft) => (
+                                <TableRow key={draft.localId} hover>
+                                  <TableCell sx={{ minWidth: 220 }}>
+                                    <TextField
+                                      fullWidth
+                                      select
+                                      size="small"
+                                      value={draft.garmentType}
+                                      onChange={(event) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({
+                                          ...current,
+                                          garmentType: event.target.value as PlayerSeasonGarmentType,
+                                          sleeveType: supportsSleeveType(event.target.value as PlayerSeasonGarmentType) ? current.sleeveType : null
+                                        }))
+                                      }
+                                    >
+                                      {playerSeasonGarmentTypeOptions.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </TextField>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 120 }}>
+                                    <TextField
+                                      fullWidth
+                                      select
+                                      size="small"
+                                      value={draft.size}
+                                      onChange={(event) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({ ...current, size: event.target.value }))
+                                      }
+                                    >
+                                      <MenuItem value="">Sin informar</MenuItem>
+                                      {getSizeOptionsForGarmentType(draft.garmentType, draft.size).map((size) => (
+                                        <MenuItem key={size} value={size}>
+                                          {size}
+                                        </MenuItem>
+                                      ))}
+                                    </TextField>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 90 }}>
+                                    <TextField
+                                      fullWidth
+                                      size="small"
+                                      type="number"
+                                      value={draft.quantity}
+                                      onChange={(event) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({ ...current, quantity: event.target.value }))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ minWidth: 90 }}>
+                                    <Checkbox
+                                      checked={draft.hasItem}
+                                      onChange={(_event, checked) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({ ...current, hasItem: checked }))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ minWidth: 90 }}>
+                                    <Checkbox
+                                      checked={draft.isKept === true}
+                                      indeterminate={draft.isKept === null}
+                                      onChange={() =>
+                                        updateGarmentDraft(draft.localId, (current) => ({
+                                          ...current,
+                                          isKept: cycleTriStateValue(current.isKept)
+                                        }))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ minWidth: 90 }}>
+                                    <Checkbox
+                                      checked={draft.needsItem === true}
+                                      indeterminate={draft.needsItem === null}
+                                      onChange={() =>
+                                        updateGarmentDraft(draft.localId, (current) => ({
+                                          ...current,
+                                          needsItem: cycleTriStateValue(current.needsItem)
+                                        }))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ minWidth: 90 }}>
+                                    <Checkbox
+                                      checked={draft.isExtra}
+                                      onChange={(_event, checked) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({ ...current, isExtra: checked }))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 130 }}>
+                                    <TextField
+                                      fullWidth
+                                      disabled={!supportsSleeveType(draft.garmentType)}
+                                      select
+                                      size="small"
+                                      value={draft.sleeveType ?? ""}
+                                      onChange={(event) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({
+                                          ...current,
+                                          sleeveType: (event.target.value || null) as SleeveType | null
+                                        }))
+                                      }
+                                    >
+                                      <MenuItem value="">No aplica</MenuItem>
+                                      {sleeveTypeOptions.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </TextField>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 260 }}>
+                                    <TextField
+                                      fullWidth
+                                      multiline
+                                      minRows={1}
+                                      size="small"
+                                      value={draft.notes}
+                                      onChange={(event) =>
+                                        updateGarmentDraft(draft.localId, (current) => ({ ...current, notes: event.target.value }))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ minWidth: 80 }}>
+                                    <IconButton aria-label="Eliminar prenda" onClick={() => removeGarmentDraft(draft.localId)} size="small">
+                                      <DeleteOutlineRounded fontSize="small" />
+                                    </IconButton>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </Stack>
+                      )}
 
-                  <Grid2 size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth
-                      label="Notas"
-                      minRows={4}
-                      multiline
-                      {...form.register("notes")}
-                    />
-                  </Grid2>
-                </Grid2>
-
-                <Divider />
-
-                <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end" }}>
-                  <Button onClick={resetEquipmentForm} variant="outlined">
-                    Revertir cambios
-                  </Button>
-                  <Button disabled={updateMutation.isPending} type="submit" variant="contained">
-                    Guardar perfil de equipacion
-                  </Button>
+                    </>
+                  )}
                 </Stack>
               </SectionCard>
+
             </Stack>
           )}
         </Grid2>

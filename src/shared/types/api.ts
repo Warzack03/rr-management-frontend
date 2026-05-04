@@ -455,46 +455,50 @@ export type CreateTreasuryPaymentPayload = {
   }>;
 };
 
-export type LogisticsKitMode = "PLAYER" | "GOALKEEPER";
+export type PlayerSeasonGarmentType =
+  | "PLAYER_MATCH_SHIRT"
+  | "PLAYER_MATCH_SHORTS"
+  | "TRAINING_SHIRT"
+  | "TRAINING_SHORTS"
+  | "TRACKSUIT_PANTS"
+  | "JACKET"
+  | "SOCKS"
+  | "GOALKEEPER_MATCH_SHIRT"
+  | "GOALKEEPER_MATCH_SHORTS";
 
-export type LogisticsEquipmentStatus = "NO_TEAM" | "INCOMPLETE" | "READY";
+export type SleeveType = "SHORT" | "LONG";
 
-export type LogisticsEquipmentSummary = {
-  profileId: number | null;
+export type PlayerSeasonGarment = {
+  id: number;
+  seasonId: number;
   personId: number;
-  fullName: string;
-  nifValue: string;
-  currentTeamId: number | null;
+  fullName: string | null;
   currentTeamCode: string | null;
   currentTeamName: string | null;
-  originTeamId: number | null;
-  originTeamCode: string | null;
-  originTeamName: string | null;
-  kitMode: LogisticsKitMode | null;
-  shirtName: string | null;
-  shirtNumber: number | null;
-  shirtSize: string | null;
-  pantsSize: string | null;
-  jacketSize: string | null;
-  socksSize: string | null;
-  status: LogisticsEquipmentStatus;
-  incomplete: boolean;
-};
-
-export type LogisticsEquipmentDetail = LogisticsEquipmentSummary & {
-  active: boolean;
+  garmentType: PlayerSeasonGarmentType;
+  size: string | null;
+  quantity: number;
+  hasItem: boolean;
+  isKept: boolean | null;
+  needsItem: boolean | null;
+  isExtra: boolean;
   notes: string | null;
+  sleeveType: SleeveType | null;
 };
 
-export type UpdateLogisticsEquipmentPayload = {
-  kitMode?: LogisticsKitMode | null;
-  shirtName?: string | null;
-  shirtNumber?: number | null;
-  shirtSize?: string | null;
-  pantsSize?: string | null;
-  jacketSize?: string | null;
-  socksSize?: string | null;
-  notes?: string | null;
+export type UpsertPlayerSeasonGarmentsPayload = {
+  garments: Array<{
+    id?: number;
+    garmentType: PlayerSeasonGarmentType;
+    size?: string | null;
+    quantity: number;
+    hasItem: boolean;
+    isKept: boolean | null;
+    needsItem: boolean | null;
+    isExtra: boolean;
+    notes?: string | null;
+    sleeveType: SleeveType | null;
+  }>;
 };
 
 export type LogisticsGarmentCategory =
