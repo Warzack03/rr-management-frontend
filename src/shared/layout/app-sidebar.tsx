@@ -21,7 +21,9 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
-  Typography
+  Typography,
+  alpha,
+  useTheme
 } from "@mui/material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuthMe, useLogoutMutation } from "../../modules/auth/api/auth-hooks";
@@ -92,6 +94,7 @@ const navItems = [
 ] as const;
 
 export function AppSidebar() {
+  const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const authQuery = useAuthMe();
@@ -122,7 +125,7 @@ export function AppSidebar() {
           <Box
             sx={{
               "& .MuiAvatar-root": {
-                bgcolor: "rgba(255,255,255,0.14)"
+                bgcolor: alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.09 : 0.14)
               }
             }}
           >
@@ -138,7 +141,7 @@ export function AppSidebar() {
             >
               Rising Raimon
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.72)", fontSize: 13 }}>
+            <Typography sx={{ color: alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.7 : 0.72), fontSize: 13 }}>
               Panel interno del club
             </Typography>
           </Box>
@@ -157,10 +160,12 @@ export function AppSidebar() {
                 sx={{
                   borderRadius: tokens.radius.sm,
                   minHeight: 52,
-                  bgcolor: isActive ? "rgba(237, 203, 80, 0.18)" : "transparent",
-                  border: isActive ? "1px solid rgba(237, 203, 80, 0.28)" : "1px solid transparent",
+                  bgcolor: isActive ? alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.16 : 0.18) : "transparent",
+                  border: isActive ? `1px solid ${alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.26 : 0.28)}` : "1px solid transparent",
                   "&:hover": {
-                    bgcolor: isActive ? "rgba(237, 203, 80, 0.22)" : "rgba(255,255,255,0.08)"
+                    bgcolor: isActive
+                      ? alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.2 : 0.22)
+                      : alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.06 : 0.08)
                   }
                 }}
                 to={item.path}
@@ -168,7 +173,7 @@ export function AppSidebar() {
                 <ListItemIcon
                   sx={{
                     minWidth: 40,
-                    color: isActive ? "secondary.main" : "rgba(255,255,255,0.85)"
+                    color: isActive ? "secondary.main" : alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.82 : 0.85)
                   }}
                 >
                   {item.icon}
@@ -188,7 +193,7 @@ export function AppSidebar() {
 
         <Box
           sx={{
-            borderTop: "1px solid rgba(255,255,255,0.1)",
+            borderTop: `1px solid ${alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.08 : 0.1)}`,
             pt: 2
           }}
         >
@@ -198,7 +203,7 @@ export function AppSidebar() {
                 sx={{
                   width: 40,
                   height: 40,
-                  bgcolor: "rgba(255,255,255,0.16)",
+                  bgcolor: alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.1 : 0.16),
                   color: "#FFF"
                 }}
               >
@@ -206,7 +211,7 @@ export function AppSidebar() {
               </Avatar>
               <Box>
                 <Typography sx={{ fontWeight: 600 }}>{authQuery.data?.username ?? "Admin"}</Typography>
-                <Typography sx={{ color: "rgba(255,255,255,0.68)", fontSize: 13 }}>
+                <Typography sx={{ color: alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.64 : 0.68), fontSize: 13 }}>
                   {authQuery.data?.role ?? "ADMIN"}
                 </Typography>
               </Box>
@@ -223,7 +228,7 @@ export function AppSidebar() {
               }
               sx={{
                 borderRadius: tokens.radius.sm,
-                color: "rgba(255,255,255,0.78)"
+                color: alpha("#FFFFFF", theme.palette.mode === "dark" ? 0.74 : 0.78)
               }}
             >
               <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>

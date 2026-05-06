@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowOutwardRounded } from "@mui/icons-material";
-import { alpha, Box, Card, CardContent, Stack, Typography } from "@mui/material";
+import { alpha, Box, Card, CardContent, Stack, Typography, useTheme } from "@mui/material";
 
 type KpiCardProps = {
   label: string;
@@ -10,22 +10,22 @@ type KpiCardProps = {
   icon?: ReactNode;
 };
 
-const accentMap = {
-  blue: {
-    bg: "rgba(58, 104, 168, 0.12)",
-    color: "primary.main"
-  },
-  gold: {
-    bg: "rgba(237, 203, 80, 0.22)",
-    color: "warning.main"
-  },
-  neutral: {
-    bg: "rgba(98, 114, 131, 0.12)",
-    color: "text.secondary"
-  }
-} as const;
-
 export function KpiCard({ label, value, helper, icon, accent = "blue" }: KpiCardProps) {
+  const theme = useTheme();
+  const accentMap = {
+    blue: {
+      bg: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.18 : 0.12),
+      color: theme.palette.primary.main
+    },
+    gold: {
+      bg: alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.18 : 0.22),
+      color: theme.palette.warning.main
+    },
+    neutral: {
+      bg: alpha(theme.palette.text.secondary, theme.palette.mode === "dark" ? 0.18 : 0.12),
+      color: theme.palette.text.secondary
+    }
+  } as const;
   const palette = accentMap[accent];
 
   return (

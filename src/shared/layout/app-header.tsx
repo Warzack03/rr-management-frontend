@@ -6,6 +6,7 @@ import {
   MenuItem,
   Stack,
   TextField,
+  useTheme,
   Toolbar,
   Typography
 } from "@mui/material";
@@ -21,6 +22,7 @@ type RouteHandle = {
 };
 
 export function AppHeader() {
+  const theme = useTheme();
   const matches = useMatches();
   const location = useLocation();
   const authQuery = useAuthMe();
@@ -111,8 +113,8 @@ export function AppHeader() {
             <Chip
               label={authQuery.data ? `${authQuery.data.username} - ${authQuery.data.role}` : "Panel interno"}
               sx={{
-                bgcolor: alpha("#EDCB50", 0.2),
-                color: "primary.dark",
+                bgcolor: alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.18 : 0.2),
+                color: theme.palette.mode === "dark" ? "secondary.light" : "primary.dark",
                 fontWeight: 600
               }}
             />

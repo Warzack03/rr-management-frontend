@@ -13,7 +13,8 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
+  useTheme
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -27,6 +28,7 @@ import { useGenerateTreasuryBaseMutation, useTreasuryConfig, useUpdateTreasuryCo
 import { formatCurrency, getTreasuryConceptLabel, getTreasuryPlayerConditionLabel } from "../model/treasury-ui";
 
 export function TreasuryConfigPage() {
+  const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const seasonId = searchParams.get("seasonId");
   const resolvedSeasonId = seasonId ? Number(seasonId) : undefined;
@@ -316,7 +318,7 @@ export function TreasuryConfigPage() {
                 <Stack
                   spacing={0.35}
                   sx={{
-                    border: "1px dashed #D8E0EA",
+                    border: `1px dashed ${theme.palette.divider}`,
                     borderRadius: 2,
                     px: 2,
                     py: 1.5

@@ -12,7 +12,8 @@ import {
   InputAdornment,
   Stack,
   TextField,
-  Typography
+  Typography,
+  useTheme
 } from "@mui/material";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -29,6 +30,7 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
+  const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const authQuery = useAuthMe();
@@ -57,6 +59,7 @@ export function LoginPage() {
     loginMutation.error instanceof HttpClientError
       ? loginMutation.error.payload?.message ?? loginMutation.error.message
       : loginMutation.error?.message;
+  const isDarkMode = theme.palette.mode === "dark";
 
   return (
     <Box
@@ -67,7 +70,9 @@ export function LoginPage() {
         px: 3,
         py: 4,
         background:
-          "radial-gradient(circle at top right, rgba(237, 203, 80, 0.45), transparent 24%), linear-gradient(135deg, #17345B 0%, #2F5788 42%, #4877B5 100%)"
+          isDarkMode
+            ? "radial-gradient(circle at top left, rgba(243, 203, 69, 0.18), transparent 26%), radial-gradient(circle at top right, rgba(58, 104, 168, 0.28), transparent 24%), linear-gradient(160deg, #06121f 0%, #0c2443 55%, #06111e 100%)"
+            : "radial-gradient(circle at top right, rgba(237, 203, 80, 0.45), transparent 24%), linear-gradient(135deg, #17345B 0%, #2F5788 42%, #4877B5 100%)"
       }}
     >
       <Card
@@ -75,8 +80,11 @@ export function LoginPage() {
           width: "100%",
           maxWidth: 1280,
           overflow: "hidden",
-          border: "1px solid rgba(255,255,255,0.22)",
-          boxShadow: "0 30px 70px rgba(10, 24, 43, 0.24)"
+          border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.22)"}`,
+          background: isDarkMode
+            ? "linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03))"
+            : theme.palette.background.paper,
+          boxShadow: isDarkMode ? "0 30px 70px rgba(0, 0, 0, 0.35)" : "0 30px 70px rgba(10, 24, 43, 0.24)"
         }}
       >
         <Grid2 container>
@@ -167,7 +175,9 @@ export function LoginPage() {
               display: { xs: "none", md: "block" },
               minHeight: 760,
               background:
-                "radial-gradient(circle at top left, rgba(237, 203, 80, 0.42), transparent 28%), linear-gradient(160deg, #17345B 0%, #315C93 58%, #3E6FAD 100%)"
+                isDarkMode
+                  ? "radial-gradient(circle at top left, rgba(243, 203, 69, 0.24), transparent 28%), linear-gradient(160deg, #071629 0%, #0D2A49 58%, #091523 100%)"
+                  : "radial-gradient(circle at top left, rgba(237, 203, 80, 0.42), transparent 28%), linear-gradient(160deg, #17345B 0%, #315C93 58%, #3E6FAD 100%)"
             }}
           >
             <Box
@@ -178,7 +188,7 @@ export function LoginPage() {
                 position: "absolute",
                 inset: "8% auto auto 4%",
                 width: 390,
-                opacity: 0.06
+                opacity: isDarkMode ? 0.08 : 0.06
               }}
             />
 
@@ -197,7 +207,7 @@ export function LoginPage() {
                       textTransform: "uppercase",
                       letterSpacing: 1.5,
                       fontWeight: 700,
-                      color: alpha("#FFFFFF", 0.72)
+                      color: alpha("#FFFFFF", isDarkMode ? 0.62 : 0.72)
                     }}
                   >
                     Panel interno

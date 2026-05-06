@@ -1,4 +1,4 @@
-import { Avatar, Box } from "@mui/material";
+import { alpha, Avatar, Box, useTheme } from "@mui/material";
 
 type CrestAvatarProps = {
   alt: string;
@@ -7,12 +7,14 @@ type CrestAvatarProps = {
 };
 
 export function CrestAvatar({ alt, size, src }: CrestAvatarProps) {
+  const theme = useTheme();
+
   return (
     <Avatar
       sx={{
         width: size,
         height: size,
-        bgcolor: "rgba(58, 104, 168, 0.08)"
+        bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.16 : 0.08)
       }}
     >
       <Box

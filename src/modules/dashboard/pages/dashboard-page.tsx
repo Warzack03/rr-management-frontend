@@ -1,5 +1,6 @@
 import { AccountBalanceWalletRounded, AutoGraphRounded, GroupsRounded, InfoOutlined, Inventory2Rounded, SportsScoreRounded, WarningAmberRounded } from "@mui/icons-material";
 import {
+  alpha,
   Box,
   Chip,
   CircularProgress,
@@ -14,7 +15,8 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Typography
+  Typography,
+  useTheme
 } from "@mui/material";
 import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
@@ -35,6 +37,7 @@ function formatCurrency(amount: number) {
 }
 
 export function DashboardPage() {
+  const theme = useTheme();
   const [searchParams] = useSearchParams();
   const seasonId = searchParams.get("seasonId");
   const selectedSeasonId = seasonId ? Number(seasonId) : undefined;
@@ -260,7 +263,7 @@ export function DashboardPage() {
                     disableGutters
                     sx={{
                       py: 0.8,
-                      borderTop: index === 0 ? "none" : "1px dashed #D8E0EA"
+                      borderTop: index === 0 ? "none" : `1px dashed ${theme.palette.divider}`
                     }}
                   >
                     <Box
@@ -286,7 +289,10 @@ export function DashboardPage() {
                           borderRadius: "50%",
                           display: "grid",
                           placeItems: "center",
-                          bgcolor: item.count > 0 ? "rgba(237, 203, 80, 0.24)" : "rgba(58, 104, 168, 0.1)",
+                          bgcolor:
+                            item.count > 0
+                              ? alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.18 : 0.24)
+                              : alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.18 : 0.1),
                           color: item.count > 0 ? "warning.main" : "primary.main",
                           fontWeight: 700
                         }}
