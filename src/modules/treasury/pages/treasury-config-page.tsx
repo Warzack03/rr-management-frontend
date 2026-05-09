@@ -1,6 +1,7 @@
 import { AutoFixHighRounded, SaveRounded } from "@mui/icons-material";
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
   CircularProgress,
@@ -204,93 +205,104 @@ export function TreasuryConfigPage() {
             <EmptyState description="No hay reglas economicas disponibles para esta temporada." title="Sin reglas" />
           ) : (
             <Stack spacing={2}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Bloque</TableCell>
-                    <TableCell>Condicion</TableCell>
-                    <TableCell>Concepto</TableCell>
-                    <TableCell align="right">Importe</TableCell>
-                    <TableCell align="right">Vence en dias</TableCell>
-                    <TableCell align="center">Activa</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {config.rules.map((rule) => {
-                    const key = `${rule.economicBlockId}-${rule.playerCondition}-${rule.conceptCode}`;
-                    const currentRule = rules[key] ?? {
-                      defaultAmount: rule.defaultAmount,
-                      defaultDueDays: rule.defaultDueDays,
-                      active: rule.active
-                    };
+              <Box sx={{ overflowX: "auto" }}>
+                <Table size="small" sx={{ minWidth: 780 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Bloque</TableCell>
+                      <TableCell>Condicion</TableCell>
+                      <TableCell>Concepto</TableCell>
+                      <TableCell align="right">Importe</TableCell>
+                      <TableCell align="right">Vence en dias</TableCell>
+                      <TableCell align="center">Activa</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {config.rules.map((rule) => {
+                      const key = `${rule.economicBlockId}-${rule.playerCondition}-${rule.conceptCode}`;
+                      const currentRule = rules[key] ?? {
+                        defaultAmount: rule.defaultAmount,
+                        defaultDueDays: rule.defaultDueDays,
+                        active: rule.active
+                      };
 
-                    return (
-                      <TableRow key={key}>
-                        <TableCell>{rule.economicBlockCode}</TableCell>
-                        <TableCell>{getTreasuryPlayerConditionLabel(rule.playerCondition)}</TableCell>
-                        <TableCell>{getTreasuryConceptLabel(rule.conceptCode)}</TableCell>
-                        <TableCell align="right" sx={{ minWidth: 160 }}>
-                          <TextField
-                            disabled={config.readOnly}
-                            inputProps={{ min: 0, step: 0.01 }}
-                            size="small"
-                            type="number"
-                            value={currentRule.defaultAmount}
-                            onChange={(event) =>
-                              setRules((prev) => ({
-                                ...prev,
-                                [key]: {
-                                  ...currentRule,
-                                  defaultAmount: Number(event.target.value)
-                                }
-                              }))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell align="right" sx={{ minWidth: 160 }}>
-                          <TextField
-                            disabled={config.readOnly}
-                            inputProps={{ min: 1, step: 1 }}
-                            size="small"
-                            type="number"
-                            value={currentRule.defaultDueDays}
-                            onChange={(event) =>
-                              setRules((prev) => ({
-                                ...prev,
-                                [key]: {
-                                  ...currentRule,
-                                  defaultDueDays: Number(event.target.value)
-                                }
-                              }))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Checkbox
-                            checked={currentRule.active}
-                            disabled={config.readOnly}
-                            onChange={(_event, checked) =>
-                              setRules((prev) => ({
-                                ...prev,
-                                [key]: {
-                                  ...currentRule,
-                                  active: checked
-                                }
-                              }))
-                            }
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                      return (
+                        <TableRow key={key}>
+                          <TableCell>{rule.economicBlockCode}</TableCell>
+                          <TableCell>{getTreasuryPlayerConditionLabel(rule.playerCondition)}</TableCell>
+                          <TableCell>{getTreasuryConceptLabel(rule.conceptCode)}</TableCell>
+                          <TableCell align="right" sx={{ minWidth: 160 }}>
+                            <TextField
+                              disabled={config.readOnly}
+                              inputProps={{ min: 0, step: 0.01 }}
+                              size="small"
+                              type="number"
+                              value={currentRule.defaultAmount}
+                              onChange={(event) =>
+                                setRules((prev) => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...currentRule,
+                                    defaultAmount: Number(event.target.value)
+                                  }
+                                }))
+                              }
+                            />
+                          </TableCell>
+                          <TableCell align="right" sx={{ minWidth: 160 }}>
+                            <TextField
+                              disabled={config.readOnly}
+                              inputProps={{ min: 1, step: 1 }}
+                              size="small"
+                              type="number"
+                              value={currentRule.defaultDueDays}
+                              onChange={(event) =>
+                                setRules((prev) => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...currentRule,
+                                    defaultDueDays: Number(event.target.value)
+                                  }
+                                }))
+                              }
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <Checkbox
+                              checked={currentRule.active}
+                              disabled={config.readOnly}
+                              onChange={(_event, checked) =>
+                                setRules((prev) => ({
+                                  ...prev,
+                                  [key]: {
+                                    ...currentRule,
+                                    active: checked
+                                  }
+                                }))
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Box>
 
               <Typography color="text.secondary" variant="body2">
                 Referencia rapida: las reglas con importe 0 no generaran deuda base al lanzar el proceso.
               </Typography>
 
-              <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end" }}>
+              <Stack
+                direction={{ xs: "column-reverse", sm: "row" }}
+                spacing={1.5}
+                sx={{
+                  justifyContent: "flex-end",
+                  "& > .MuiButton-root": {
+                    width: { xs: "100%", sm: "auto" }
+                  }
+                }}
+              >
                 <Button
                   disabled={config.readOnly || generateBaseMutation.isPending}
                   onClick={onGenerateBase}

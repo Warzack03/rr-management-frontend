@@ -20,9 +20,9 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <Card>
-      <CardContent sx={{ p: 4 }}>
-        <Stack direction="row" spacing={3} sx={{ alignItems: "center" }}>
-          {media && <Box sx={{ minWidth: 140 }}>{media}</Box>}
+      <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={3} sx={{ alignItems: { xs: "flex-start", sm: "center" } }}>
+          {media && <Box sx={{ minWidth: { sm: 140 }, width: { xs: "100%", sm: "auto" } }}>{media}</Box>}
           <Box>
             {eyebrow && (
               <Typography
@@ -38,8 +38,8 @@ export function EmptyState({
                 {eyebrow}
               </Typography>
             )}
-            <Typography variant="h4">{title}</Typography>
-            <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 520 }}>
+            <Typography variant="h4" sx={{ fontSize: { xs: "1.35rem", sm: "1.55rem" } }}>{title}</Typography>
+            <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 520, fontSize: { xs: "0.95rem", sm: "1rem" } }}>
               {description}
             </Typography>
             {actionLabel && (

@@ -3,17 +3,20 @@ import {
   AppBar,
   Box,
   Chip,
+  IconButton,
   MenuItem,
   Stack,
   TextField,
-  useTheme,
   Toolbar,
+  useTheme,
   Typography
 } from "@mui/material";
+import { MenuRounded } from "@mui/icons-material";
 import { useEffect, useMemo } from "react";
 import { useLocation, useMatches, useSearchParams } from "react-router-dom";
 import { useAuthMe } from "../../modules/auth/api/auth-hooks";
 import { useSeasons } from "../../modules/seasons/api/seasons-hooks";
+import { tokens } from "../theme/tokens";
 import type { Season } from "../types/api";
 
 type RouteHandle = {
@@ -21,7 +24,12 @@ type RouteHandle = {
   subtitle?: string;
 };
 
-export function AppHeader() {
+type AppHeaderProps = {
+  isDesktop: boolean;
+  onOpenNavigation: () => void;
+};
+
+export function AppHeader({ isDesktop, onOpenNavigation }: AppHeaderProps) {
   const theme = useTheme();
   const matches = useMatches();
   const location = useLocation();
@@ -65,36 +73,86 @@ export function AppHeader() {
   }, [currentSeason, hasSeasonContext, searchParams, seasonId, setSearchParams]);
 
   return (
-    <AppBar position="fixed" sx={{ ml: "288px", width: "calc(100% - 288px)" }}>
+    <AppBar
+      position="fixed"
+      sx={{
+        ml: { xs: 0, lg: `${tokens.layout.sidebarWidth}px` },
+        width: { xs: "100%", lg: `calc(100% - ${tokens.layout.sidebarWidth}px)` }
+      }}
+    >
       <Toolbar
         sx={{
-          minHeight: "84px !important",
+          minHeight: { xs: "132px !important", sm: "84px !important" },
           display: "flex",
-          justifyContent: "space-between",
-          gap: 3
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "center" },
+          justifyContent: { xs: "flex-start", sm: "space-between" },
+          gap: { xs: 1.5, sm: 3 },
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.25, sm: 0 }
         }}
       >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h4">{handle.title ?? "Rising Raimon"}</Typography>
-          <Typography color="text.secondary" sx={{ mt: 0.25 }}>
-            {handle.subtitle ?? "Panel interno del club"}
-          </Typography>
-        </Box>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: "flex-start", minWidth: 0, flex: { sm: 1 }, width: "100%" }}
+        >
+          {!isDesktop && (
+            <IconButton
+              aria-label="Abrir navegacion"
+              edge="start"
+              onClick={onOpenNavigation}
+              sx={{ mt: 0.1, flexShrink: 0 }}
+            >
+              <MenuRounded />
+            </IconButton>
+          )}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              variant="h4"
+              sx={{ fontSize: { xs: "1.2rem", sm: "1.55rem" }, lineHeight: 1.05 }}
+            >
+              {handle.title ?? "Rising Raimon"}
+            </Typography>
+            <Typography
+              color="text.secondary"
+              sx={{
+                mt: 0.25,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                display: { xs: "none", sm: "block" }
+              }}
+            >
+              {handle.subtitle ?? "Panel interno del club"}
+            </Typography>
+          </Box>
+        </Stack>
 
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{
+            alignItems: "center",
+            width: { xs: "100%", sm: "auto" },
+            justifyContent: { xs: "flex-start", sm: "flex-end" }
+          }}
+        >
           {hasSeasonContext ? (
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              sx={{ alignItems: { xs: "stretch", sm: "center" }, width: { xs: "100%", sm: "auto" } }}
+            >
               <Chip
                 label={getSeasonStatusLabel(selectedSeason?.status)}
                 color={getSeasonStatusColor(selectedSeason?.status)}
                 variant="outlined"
-                sx={{ fontWeight: 700 }}
+                sx={{ fontWeight: 700, alignSelf: { xs: "flex-start", sm: "center" } }}
               />
               <TextField
                 label="Temporada"
                 select
                 size="small"
-                sx={{ minWidth: 220 }}
+                sx={{ minWidth: { sm: 220 }, width: { xs: "100%", sm: "auto" } }}
                 value={seasonId ?? currentSeason?.id ?? ""}
                 onChange={(event) => {
                   const nextParams = new URLSearchParams(searchParams);
@@ -115,7 +173,8 @@ export function AppHeader() {
               sx={{
                 bgcolor: alpha(theme.palette.secondary.main, theme.palette.mode === "dark" ? 0.18 : 0.2),
                 color: theme.palette.mode === "dark" ? "secondary.light" : "primary.dark",
-                fontWeight: 600
+                fontWeight: 600,
+                maxWidth: "100%"
               }}
             />
           )}

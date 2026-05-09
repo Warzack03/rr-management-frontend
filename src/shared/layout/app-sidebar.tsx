@@ -93,7 +93,13 @@ const navItems = [
   }
 ] as const;
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  isDesktop: boolean;
+  mobileOpen: boolean;
+  onClose: () => void;
+};
+
+export function AppSidebar({ isDesktop, mobileOpen, onClose }: AppSidebarProps) {
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -103,11 +109,13 @@ export function AppSidebar() {
   return (
     <Drawer
       anchor="left"
-      open
-      variant="permanent"
+      ModalProps={{ keepMounted: true }}
+      onClose={onClose}
+      open={isDesktop ? true : mobileOpen}
+      variant={isDesktop ? "permanent" : "temporary"}
       PaperProps={{
         sx: {
-          width: tokens.layout.sidebarWidth,
+          width: { xs: "min(88vw, 304px)", lg: tokens.layout.sidebarWidth },
           px: 2,
           py: 2.5
         }
@@ -147,7 +155,16 @@ export function AppSidebar() {
           </Box>
         </Stack>
 
-        <List disablePadding sx={{ display: "grid", gap: 0.75 }}>
+        <List
+          disablePadding
+          sx={{
+            display: "grid",
+            gap: 0.75,
+            overflowY: "auto",
+            pr: 0.5,
+            mr: -0.5
+          }}
+        >
           {navItems.map((item) => {
             const isActive =
               location.pathname === item.path ||
@@ -169,6 +186,11 @@ export function AppSidebar() {
                   }
                 }}
                 to={item.path}
+                onClick={() => {
+                  if (!isDesktop) {
+                    onClose();
+                  }
+                }}
               >
                 <ListItemIcon
                   sx={{
@@ -222,6 +244,7 @@ export function AppSidebar() {
               onClick={() =>
                 logoutMutation.mutate(undefined, {
                   onSuccess: () => {
+                    onClose();
                     navigate("/login", { replace: true });
                   }
                 })

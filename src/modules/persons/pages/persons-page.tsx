@@ -1,6 +1,7 @@
 import { AddRounded, SearchRounded } from "@mui/icons-material";
 import {
   Avatar,
+  Box,
   Button,
   Chip,
   CircularProgress,
@@ -128,7 +129,7 @@ export function PersonsPage() {
     >
       <Stack spacing={3}>
         <SectionCard subtitle="Busqueda y filtros sobre la base activa del club" title="Acciones rapidas">
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <TextField
               fullWidth
               InputProps={{
@@ -152,7 +153,7 @@ export function PersonsPage() {
                 setPage(1);
               }}
               select
-              sx={{ minWidth: 180 }}
+              sx={{ minWidth: { md: 180 }, width: { xs: "100%", md: "auto" } }}
               value={roleFilter}
             >
               <MenuItem value="">Todos</MenuItem>
@@ -169,7 +170,7 @@ export function PersonsPage() {
                 setPage(1);
               }}
               select
-              sx={{ minWidth: 160 }}
+              sx={{ minWidth: { md: 160 }, width: { xs: "100%", md: "auto" } }}
               value={activeFilter}
             >
               <MenuItem value="">Todos</MenuItem>
@@ -187,96 +188,98 @@ export function PersonsPage() {
             />
           ) : (
             <>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Persona</TableCell>
-                    <TableCell>Roles</TableCell>
-                    <TableCell>Documentacion</TableCell>
-                    <TableCell>Tesoreria</TableCell>
-                    <TableCell>Necesidades</TableCell>
-                    <TableCell>Activo</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedPersons.map((person) => {
-                    const treasurySummary = treasuryByPersonId.get(person.id);
-                    const hasPendingNeeds = logisticsPendingByPersonId.get(person.id) ?? false;
+              <Box sx={{ overflowX: "auto" }}>
+                <Table sx={{ minWidth: 760 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Persona</TableCell>
+                      <TableCell>Roles</TableCell>
+                      <TableCell>Documentacion</TableCell>
+                      <TableCell>Tesoreria</TableCell>
+                      <TableCell>Necesidades</TableCell>
+                      <TableCell>Activo</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedPersons.map((person) => {
+                      const treasurySummary = treasuryByPersonId.get(person.id);
+                      const hasPendingNeeds = logisticsPendingByPersonId.get(person.id) ?? false;
 
-                    return (
-                      <TableRow key={person.id} hover>
-                        <TableCell>
-                          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                            <Avatar sx={{ bgcolor: "primary.main" }}>{person.firstName.slice(0, 1)}</Avatar>
-                            <Stack spacing={0.35}>
-                              <Typography component={Link} sx={{ color: "primary.main", fontWeight: 600 }} to={`/persons/${person.id}`}>
-                                {person.firstName} {person.lastName}
-                              </Typography>
-                              <Typography color="text.secondary" variant="body2">
-                                {person.nifType} - {person.nifValue}
-                              </Typography>
+                      return (
+                        <TableRow key={person.id} hover>
+                          <TableCell>
+                            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                              <Avatar sx={{ bgcolor: "primary.main" }}>{person.firstName.slice(0, 1)}</Avatar>
+                              <Stack spacing={0.35}>
+                                <Typography component={Link} sx={{ color: "primary.main", fontWeight: 600 }} to={`/persons/${person.id}`}>
+                                  {person.firstName} {person.lastName}
+                                </Typography>
+                                <Typography color="text.secondary" variant="body2">
+                                  {person.nifType} - {person.nifValue}
+                                </Typography>
+                              </Stack>
                             </Stack>
-                          </Stack>
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                            {person.roles.map((role) => (
-                              <Chip key={role} label={getPersonRoleLabel(role)} size="small" />
-                            ))}
-                          </Stack>
-                        </TableCell>
-                        <TableCell>{getDocumentStatusLabel(person.documentStatus)}</TableCell>
-                        <TableCell>
-                          {treasurySummary ? (
-                            <TreasuryPaymentStatusChip overdueAmount={treasurySummary.totalOverdue} pendingAmount={treasurySummary.totalPending} />
-                          ) : (
-                            <Chip label="Sin dato" size="small" variant="outlined" />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            color={hasPendingNeeds ? "warning" : "success"}
-                            label={hasPendingNeeds ? "Si" : "No"}
-                            size="small"
-                            variant={hasPendingNeeds ? "filled" : "outlined"}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Tooltip title={person.active ? "Desactivar persona" : "Activar persona"}>
-                            <Switch
-                              checked={person.active}
-                              color="primary"
-                              disabled={updatePersonMutation.isPending}
-                              inputProps={{ "aria-label": `Cambiar estado de ${person.firstName} ${person.lastName}` }}
-                              onChange={(_, checked) => {
-                                void updatePersonMutation.mutateAsync({
-                                  personId: String(person.id),
-                                  payload: {
-                                    firstName: person.firstName,
-                                    lastName: person.lastName,
-                                    nifType: person.nifType,
-                                    nifValue: person.nifValue,
-                                    birthDate: person.birthDate ?? undefined,
-                                    address: person.address ?? undefined,
-                                    contact: person.contact ?? undefined,
-                                    active: checked,
-                                    documentStatus: person.documentStatus ?? undefined,
-                                    notes: person.notes ?? undefined
-                                  }
-                                }, {
-                                  onSuccess: () => {
-                                    showSuccess(`Persona ${checked ? "activada" : "desactivada"} correctamente.`);
-                                  }
-                                });
-                              }}
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                              {person.roles.map((role) => (
+                                <Chip key={role} label={getPersonRoleLabel(role)} size="small" />
+                              ))}
+                            </Stack>
+                          </TableCell>
+                          <TableCell>{getDocumentStatusLabel(person.documentStatus)}</TableCell>
+                          <TableCell>
+                            {treasurySummary ? (
+                              <TreasuryPaymentStatusChip overdueAmount={treasurySummary.totalOverdue} pendingAmount={treasurySummary.totalPending} />
+                            ) : (
+                              <Chip label="Sin dato" size="small" variant="outlined" />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              color={hasPendingNeeds ? "warning" : "success"}
+                              label={hasPendingNeeds ? "Si" : "No"}
+                              size="small"
+                              variant={hasPendingNeeds ? "filled" : "outlined"}
                             />
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={person.active ? "Desactivar persona" : "Activar persona"}>
+                              <Switch
+                                checked={person.active}
+                                color="primary"
+                                disabled={updatePersonMutation.isPending}
+                                inputProps={{ "aria-label": `Cambiar estado de ${person.firstName} ${person.lastName}` }}
+                                onChange={(_, checked) => {
+                                  void updatePersonMutation.mutateAsync({
+                                    personId: String(person.id),
+                                    payload: {
+                                      firstName: person.firstName,
+                                      lastName: person.lastName,
+                                      nifType: person.nifType,
+                                      nifValue: person.nifValue,
+                                      birthDate: person.birthDate ?? undefined,
+                                      address: person.address ?? undefined,
+                                      contact: person.contact ?? undefined,
+                                      active: checked,
+                                      documentStatus: person.documentStatus ?? undefined,
+                                      notes: person.notes ?? undefined
+                                    }
+                                  }, {
+                                    onSuccess: () => {
+                                      showSuccess(`Persona ${checked ? "activada" : "desactivada"} correctamente.`);
+                                    }
+                                  });
+                                }}
+                              />
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Box>
 
               <Stack sx={{ mt: 2, alignItems: "center" }}>
                 <Pagination count={pageCount} onChange={(_event, value) => setPage(value)} page={page} />

@@ -19,8 +19,8 @@ export function PageContainer({
   return (
     <Box
       sx={{
-        px: 4,
-        py: 4,
+        px: { xs: 2, sm: 3, lg: 4 },
+        py: { xs: 2.5, sm: 3, lg: 4 },
         width: "100%"
       }}
     >
@@ -32,10 +32,10 @@ export function PageContainer({
       >
         {(eyebrow || title || description || actions) && (
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             spacing={2}
             sx={{
-              alignItems: "flex-end",
+              alignItems: { xs: "stretch", sm: "flex-end" },
               justifyContent: "space-between",
               mb: 3.5
             }}
@@ -55,14 +55,28 @@ export function PageContainer({
                   {eyebrow}
                 </Typography>
               )}
-              {title && <Typography variant="h3">{title}</Typography>}
+              {title && <Typography variant="h3" sx={{ fontSize: { xs: "1.75rem", sm: "2rem" } }}>{title}</Typography>}
               {description && (
-                <Typography color="text.secondary" sx={{ mt: 0.9, maxWidth: 760 }}>
+                <Typography color="text.secondary" sx={{ mt: 0.9, maxWidth: 760, fontSize: { xs: "0.95rem", sm: "1rem" } }}>
                   {description}
                 </Typography>
               )}
             </Box>
-            {actions}
+            {actions && (
+              <Box
+                sx={{
+                  width: { xs: "100%", sm: "auto" },
+                  "& > .MuiButton-root": {
+                    width: { xs: "100%", sm: "auto" }
+                  },
+                  "& > .MuiStack-root": {
+                    width: { xs: "100%", sm: "auto" }
+                  }
+                }}
+              >
+                {actions}
+              </Box>
+            )}
           </Stack>
         )}
 

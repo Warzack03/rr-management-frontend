@@ -547,7 +547,16 @@ export function LogisticsEquipmentPage() {
                             ? "Todavia no hay prendas cargadas para este jugador en la temporada."
                             : `${garmentDrafts.length} prendas editables en el modelo final.`}
                         </Typography>
-                        <Stack direction="row" spacing={1}>
+                        <Stack
+                          direction={{ xs: "column", sm: "row" }}
+                          spacing={1}
+                          sx={{
+                            width: { xs: "100%", md: "auto" },
+                            "& > .MuiButton-root": {
+                              width: { xs: "100%", sm: "auto" }
+                            }
+                          }}
+                        >
                           <Button onClick={() => setGarmentDrafts((current) => [...current, createEmptyGarmentDraft()])} variant="outlined">
                             Anadir prenda
                           </Button>
@@ -743,6 +752,7 @@ export function LogisticsEquipmentPage() {
                 <Button
                   disabled={generateBaseRequestsMutation.isPending}
                   onClick={handleGenerateBaseRequests}
+                  sx={{ width: { xs: "100%", md: "auto" } }}
                   variant="contained"
                 >
                   Generar necesidades base
@@ -751,7 +761,7 @@ export function LogisticsEquipmentPage() {
                   label="Estado"
                   select
                   size="small"
-                  sx={{ minWidth: 220 }}
+                  sx={{ minWidth: { md: 220 }, width: { xs: "100%", md: "auto" } }}
                   value={requestStatusFilter}
                   onChange={(event) => setRequestStatusFilter(event.target.value as "ALL" | LogisticsRequestStatus)}
                 >
@@ -889,7 +899,7 @@ export function LogisticsEquipmentPage() {
                 )}
                 {extraRecipientMode === "EXTERNAL" && (
                   <Grid2 size={{ xs: 12 }}>
-                    <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+                    <Stack direction="row" spacing={1} sx={{ justifyContent: { xs: "stretch", sm: "flex-end" } }}>
                       <Button component={Link} to="/logistics/external-recipients" size="small" variant="text">
                         Abrir ficha de destinatarios
                       </Button>
@@ -906,10 +916,11 @@ export function LogisticsEquipmentPage() {
                   />
                 </Grid2>
                 <Grid2 size={{ xs: 12 }}>
-                  <Stack direction="row" justifyContent="flex-end">
+                  <Stack direction="row" justifyContent={{ xs: "stretch", sm: "flex-end" }}>
                     <Button
                       disabled={createExtraRequestMutation.isPending}
                       onClick={handleCreateExtraRequest}
+                      sx={{ width: { xs: "100%", sm: "auto" } }}
                       variant="outlined"
                     >
                       Crear extra

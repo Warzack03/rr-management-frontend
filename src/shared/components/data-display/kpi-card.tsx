@@ -43,7 +43,7 @@ export function KpiCard({ label, value, helper, icon, accent = "blue" }: KpiCard
           pointerEvents: "none"
         }}
       />
-      <CardContent sx={{ p: 3 }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={2.5}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
             <Typography color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -67,7 +67,8 @@ export function KpiCard({ label, value, helper, icon, accent = "blue" }: KpiCard
           <Typography
             variant="h2"
             sx={{
-              lineHeight: 0.95
+              lineHeight: 0.95,
+              fontSize: { xs: "2rem", sm: "2.6rem" }
             }}
           >
             {value}
