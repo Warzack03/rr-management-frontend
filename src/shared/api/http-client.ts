@@ -1,9 +1,40 @@
 import type { ApiError } from "../types/api";
 
-const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-const API_BASE_URL = (configuredApiBaseUrl && configuredApiBaseUrl.length > 0
-  ? configuredApiBaseUrl
-  : "http://localhost:9081/api/v1").replace(/\/$/, "");
+const DEFAULT_API_BASE_URL = "http://localhost:9081/api/v1";
+
+function normalizeBaseUrl(baseUrl: string) {
+  return baseUrl.replace(/\/$/, "");
+}
+
+function isLoopbackHostname(hostname: string) {
+  const normalizedHostname = hostname.trim().toLowerCase();
+  return normalizedHostname === "localhost" || normalizedHostname === "127.0.0.1" || normalizedHostname === "::1";
+}
+
+function resolveApiBaseUrl() {
+  const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  const baseUrl = normalizeBaseUrl(configuredApiBaseUrl && configuredApiBaseUrl.length > 0 ? configuredApiBaseUrl : DEFAULT_API_BASE_URL);
+
+  if (typeof window === "undefined") {
+    return baseUrl;
+  }
+
+  try {
+    const apiUrl = new URL(baseUrl);
+    const appHostname = window.location.hostname;
+
+    if (!appHostname || isLoopbackHostname(appHostname) || !isLoopbackHostname(apiUrl.hostname)) {
+      return baseUrl;
+    }
+
+    apiUrl.hostname = appHostname;
+    return normalizeBaseUrl(apiUrl.toString());
+  } catch {
+    return baseUrl;
+  }
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 

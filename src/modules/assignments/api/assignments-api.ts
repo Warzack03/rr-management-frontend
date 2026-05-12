@@ -15,8 +15,15 @@ export function getPendingAssignments(signal?: AbortSignal) {
   return httpClient<PendingTeamAssignment[]>("/team-assignments/pending", { signal });
 }
 
-export function getCurrentAssignmentsBySeason(seasonId?: number, signal?: AbortSignal) {
-  const query = seasonId ? `?seasonId=${seasonId}` : "";
+export function getCurrentAssignmentsBySeason(seasonId?: number, includeInactive = false, signal?: AbortSignal) {
+  const params = new URLSearchParams();
+  if (seasonId) {
+    params.set("seasonId", String(seasonId));
+  }
+  if (includeInactive) {
+    params.set("includeInactive", "true");
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : "";
   return httpClient<CurrentTeamAssignment[]>(`/team-assignments/current${query}`, { signal });
 }
 

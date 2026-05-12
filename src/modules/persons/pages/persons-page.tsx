@@ -38,12 +38,13 @@ const PAGE_SIZE = 20;
 
 export function PersonsPage() {
   const { showSuccess } = useAppFeedback();
-  const personsQuery = usePersons();
-  const seasonsQuery = useSeasons();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"" | PersonRoleType>("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("true");
   const [page, setPage] = useState(1);
+  const personsScope = activeFilter === "" ? "all" : activeFilter === "false" ? "inactive" : "active";
+  const personsQuery = usePersons(personsScope);
+  const seasonsQuery = useSeasons();
   const persons = personsQuery.data ?? [];
   const defaultSeason =
     (seasonsQuery.data ?? []).find((season) => season.status === "CURRENT") ??
@@ -83,11 +84,10 @@ export function PersonsPage() {
         fullName.includes(normalizedSearch) ||
         normalizeSearchText(person.nifValue).includes(normalizedSearch);
       const matchesRole = roleFilter === "" || person.roles.includes(roleFilter);
-      const matchesActive = activeFilter === "" || String(person.active) === activeFilter;
 
-      return matchesSearch && matchesRole && matchesActive;
+      return matchesSearch && matchesRole;
     });
-  }, [activeFilter, persons, roleFilter, search]);
+  }, [persons, roleFilter, search]);
 
   const pageCount = Math.max(1, Math.ceil(filteredPersons.length / PAGE_SIZE));
   const paginatedPersons = useMemo(() => {
@@ -116,6 +116,13 @@ export function PersonsPage() {
     );
   }
 
+  const listScopeSubtitle =
+    activeFilter === ""
+      ? "Busqueda y filtros sobre toda la base de personas del club"
+      : activeFilter === "false"
+        ? "Busqueda y filtros sobre las personas inactivas del club"
+        : "Busqueda y filtros sobre la base activa del club";
+
   return (
     <PageContainer
       actions={
@@ -128,7 +135,7 @@ export function PersonsPage() {
       title="Personas"
     >
       <Stack spacing={3}>
-        <SectionCard subtitle="Busqueda y filtros sobre la base activa del club" title="Acciones rapidas">
+        <SectionCard subtitle={listScopeSubtitle} title="Acciones rapidas">
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <TextField
               fullWidth

@@ -9,14 +9,15 @@ import {
 } from "./assignments-api";
 
 export const assignmentsKeys = {
-  current: (seasonId?: number) => ["assignments", "current", seasonId ?? "default"] as const,
+  current: (seasonId?: number, includeInactive = false) =>
+    ["assignments", "current", seasonId ?? "default", includeInactive ? "with-inactive" : "active-only"] as const,
   pending: (seasonId?: number) => ["assignments", "pending", seasonId ?? "default"] as const
 };
 
-export function useCurrentAssignments(seasonId?: number) {
+export function useCurrentAssignments(seasonId?: number, includeInactive = false) {
   return useQuery({
-    queryKey: assignmentsKeys.current(seasonId),
-    queryFn: ({ signal }) => getCurrentAssignmentsBySeason(seasonId, signal)
+    queryKey: assignmentsKeys.current(seasonId, includeInactive),
+    queryFn: ({ signal }) => getCurrentAssignmentsBySeason(seasonId, includeInactive, signal)
   });
 }
 

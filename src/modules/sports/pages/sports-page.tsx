@@ -72,6 +72,7 @@ export function SportsPage() {
   const personsQuery = usePersons();
   const assignmentsQuery = useCurrentAssignments(selectedSeasonId);
   const [search, setSearch] = useState("");
+  const [teamFilter, setTeamFilter] = useState<"ALL" | "WITHOUT_TEAM" | string>("ALL");
   const [selectedPersonId, setSelectedPersonId] = useState<string>("");
   const [page, setPage] = useState(1);
   const form = useForm<SportsFormValues>({
@@ -116,6 +117,18 @@ export function SportsPage() {
       .sort((left, right) => `${left.lastName} ${left.firstName}`.localeCompare(`${right.lastName} ${right.firstName}`));
   }, [assignmentsQuery.data, personsQuery.data]);
 
+  const availableTeams = useMemo(() => {
+    const teamsById = new Map<number, NonNullable<(typeof sportsCandidates)[number]["currentTeam"]>>();
+
+    sportsCandidates.forEach((person) => {
+      if (person.currentTeam) {
+        teamsById.set(person.currentTeam.id, person.currentTeam);
+      }
+    });
+
+    return Array.from(teamsById.values()).sort((left, right) => left.name.localeCompare(right.name));
+  }, [sportsCandidates]);
+
   useEffect(() => {
     if (!selectedPersonId && sportsCandidates.length > 0) {
       setSelectedPersonId(String(sportsCandidates[0].id));
@@ -145,23 +158,27 @@ export function SportsPage() {
     });
   }, [form, selectedProfileQuery.data]);
 
-  const filteredCandidates = sportsCandidates.filter((person) => {
+  const filteredCandidates = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (!normalizedSearch) {
-      return true;
-    }
 
-    return (
-      `${person.firstName} ${person.lastName}`.toLowerCase().includes(normalizedSearch) ||
-      person.nifValue.toLowerCase().includes(normalizedSearch)
-    );
-  });
+    return sportsCandidates.filter((person) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        `${person.firstName} ${person.lastName}`.toLowerCase().includes(normalizedSearch) ||
+        person.nifValue.toLowerCase().includes(normalizedSearch);
+      const matchesTeam =
+        teamFilter === "ALL" ||
+        (teamFilter === "WITHOUT_TEAM" ? person.currentTeam == null : String(person.currentTeam?.id) === teamFilter);
+
+      return matchesSearch && matchesTeam;
+    });
+  }, [search, sportsCandidates, teamFilter]);
   const pageCount = Math.max(1, Math.ceil(filteredCandidates.length / PAGE_SIZE));
   const paginatedCandidates = filteredCandidates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => {
     setPage(1);
-  }, [search, selectedSeasonId]);
+  }, [search, selectedSeasonId, teamFilter]);
 
   const loadingBase = personsQuery.isLoading || assignmentsQuery.isLoading || seasonsQuery.isLoading;
   const errorBase = personsQuery.isError || assignmentsQuery.isError || seasonsQuery.isError;
@@ -241,10 +258,25 @@ export function SportsPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 value={search}
               />
+              <TextField
+                fullWidth
+                label="Equipo"
+                onChange={(event) => setTeamFilter(event.target.value as "ALL" | "WITHOUT_TEAM" | string)}
+                select
+                value={teamFilter}
+              >
+                <MenuItem value="ALL">Todos los equipos</MenuItem>
+                <MenuItem value="WITHOUT_TEAM">Sin equipo en la temporada</MenuItem>
+                {availableTeams.map((team) => (
+                  <MenuItem key={team.id} value={String(team.id)}>
+                    {team.name}
+                  </MenuItem>
+                ))}
+              </TextField>
 
               {filteredCandidates.length === 0 ? (
                 <EmptyState
-                  description="No hay jugadores con perfil deportivo que cumplan la busqueda actual."
+                  description="No hay jugadores con perfil deportivo que cumplan los filtros actuales."
                   title="Sin resultados"
                 />
               ) : (

@@ -5,6 +5,14 @@ export function getPersons(signal?: AbortSignal) {
   return httpClient<Person[]>("/persons", { signal });
 }
 
+export function getInactivePersons(signal?: AbortSignal) {
+  return httpClient<Person[]>("/persons/inactive", { signal });
+}
+
+export function getAllPersons(signal?: AbortSignal) {
+  return httpClient<Person[]>("/persons/all", { signal });
+}
+
 export function getPersonById(personId: string, signal?: AbortSignal) {
   return httpClient<Person>(`/persons/${personId}`, { signal });
 }

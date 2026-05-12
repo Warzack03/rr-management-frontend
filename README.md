@@ -58,9 +58,10 @@ Antes de tocar pantallas o UX, revisar:
 ## API y desarrollo local
 
 - por defecto el frontend apunta de forma directa a `http://localhost:9081/api/v1`;
+- si abres el frontend desde otro dispositivo de tu red y la API sigue configurada con `localhost`, el cliente sustituye automaticamente ese host por la IP o hostname real desde el que se ha cargado la app;
 - si quieres cambiar ese host, crea un `.env` a partir de `.env.example`;
 - valor recomendado en local: `VITE_API_BASE_URL=http://localhost:9081/api/v1`;
-- el backend debe tener CORS con credenciales habilitado para `http://localhost:5173` porque la autenticacion es por sesion/cookie.
+- el backend debe tener CORS con credenciales habilitado para el origen real del frontend porque la autenticacion es por sesion/cookie.
 
 ## Tarea base actual
 

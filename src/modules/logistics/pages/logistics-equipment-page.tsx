@@ -179,7 +179,7 @@ export function LogisticsEquipmentPage() {
   const [garmentDrafts, setGarmentDrafts] = useState<GarmentDraft[]>([]);
 
   const activeTeamsQuery = useActiveTeams();
-  const currentAssignmentsQuery = useCurrentAssignments(selectedSeasonId);
+  const currentAssignmentsQuery = useCurrentAssignments(selectedSeasonId, true);
   const pendingAssignmentsQuery = usePendingAssignments(selectedSeasonId);
   const externalRecipientsQuery = useLogisticsExternalRecipients();
   const selectedTeamId = teamFilter === "ALL" ? undefined : Number(teamFilter);
