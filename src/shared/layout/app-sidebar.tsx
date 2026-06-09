@@ -243,7 +243,7 @@ export function AppSidebar({ isDesktop, mobileOpen, onClose }: AppSidebarProps) 
               disabled={logoutMutation.isPending}
               onClick={() =>
                 logoutMutation.mutate(undefined, {
-                  onSuccess: () => {
+                  onSettled: () => {
                     onClose();
                     navigate("/login", { replace: true });
                   }

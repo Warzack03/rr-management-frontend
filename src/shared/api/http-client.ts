@@ -1,4 +1,5 @@
 import type { ApiError } from "../types/api";
+import { clearAuthToken, getAuthToken } from "../../modules/auth/api/auth-token-storage";
 
 const DEFAULT_API_BASE_URL = "http://localhost:9081/api/v1";
 
@@ -57,16 +58,19 @@ export class HttpClientError extends Error {
 }
 
 export async function httpClient<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const hasJsonBody = options.body !== undefined;
+  const authToken = getAuthToken();
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? "GET",
-      credentials: "include",
+      credentials: "omit",
       headers: {
-        "Content-Type": "application/json; charset=UTF-8",
-        Accept: "application/json"
+        Accept: "application/json",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(hasJsonBody ? { "Content-Type": "application/json; charset=UTF-8" } : {})
       },
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      body: hasJsonBody ? JSON.stringify(options.body) : undefined,
       signal: options.signal
     });
   } catch (error) {
@@ -80,6 +84,10 @@ export async function httpClient<T>(path: string, options: RequestOptions = {}):
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearAuthToken();
+    }
+
     let payload: ApiError | null = null;
 
     try {

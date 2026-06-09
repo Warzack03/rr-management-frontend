@@ -22,7 +22,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
 import { authKeys, useAuthMe, useLoginMutation } from "../api/auth-hooks";
-import { getCurrentUser } from "../api/auth-api";
+import { clearAuthToken, storeAuthToken } from "../api/auth-token-storage";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Introduce tu usuario"),
@@ -39,7 +39,6 @@ export function LoginPage() {
   const authQuery = useAuthMe();
   const loginMutation = useLoginMutation();
   const [showPassword, setShowPassword] = useState(false);
-  const [sessionError, setSessionError] = useState<string | null>(null);
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -49,21 +48,13 @@ export function LoginPage() {
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
-    setSessionError(null);
-    await loginMutation.mutateAsync(values);
-
-    try {
-      const authenticatedUser = await getCurrentUser();
-      queryClient.setQueryData(authKeys.me, authenticatedUser);
-      navigate((location.state as { from?: string } | undefined)?.from ?? "/dashboard", {
-        replace: true
-      });
-    } catch {
-      queryClient.removeQueries({ queryKey: authKeys.me });
-      setSessionError(
-        "Las credenciales son correctas, pero este dispositivo no ha podido mantener la sesion con la API. Revisa la red local y vuelve a intentarlo."
-      );
-    }
+    clearAuthToken();
+    const session = await loginMutation.mutateAsync(values);
+    storeAuthToken(session.accessToken);
+    queryClient.setQueryData(authKeys.me, session.user);
+    navigate((location.state as { from?: string } | undefined)?.from ?? "/dashboard", {
+      replace: true
+    });
   });
 
   if (authQuery.data) {
@@ -71,10 +62,9 @@ export function LoginPage() {
   }
 
   const loginError =
-    sessionError ??
-    (loginMutation.error instanceof HttpClientError
+    loginMutation.error instanceof HttpClientError
       ? loginMutation.error.payload?.message ?? loginMutation.error.message
-      : loginMutation.error?.message);
+      : loginMutation.error?.message;
   const isDarkMode = theme.palette.mode === "dark";
 
   return (

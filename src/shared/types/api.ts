@@ -10,6 +10,13 @@ export type AuthUser = {
   role: "ADMIN";
 };
 
+export type AuthSession = {
+  user: AuthUser;
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresAt: string;
+};
+
 export type PersonRoleType = "JUGADOR" | "ENTRENADOR" | "STAFF";
 
 export type DocumentType = "DNI" | "NIE" | "PASAPORTE";

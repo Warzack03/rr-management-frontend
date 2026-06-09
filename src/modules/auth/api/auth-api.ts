@@ -1,5 +1,5 @@
 import { httpClient } from "../../../shared/api/http-client";
-import type { AuthUser } from "../../../shared/types/api";
+import type { AuthSession, AuthUser } from "../../../shared/types/api";
 
 type LoginRequest = {
   username: string;
@@ -7,7 +7,7 @@ type LoginRequest = {
 };
 
 export function login(request: LoginRequest) {
-  return httpClient<AuthUser>("/auth/login", {
+  return httpClient<AuthSession>("/auth/login", {
     method: "POST",
     body: request
   });

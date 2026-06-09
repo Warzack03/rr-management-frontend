@@ -1,11 +1,17 @@
 import { Box, CircularProgress, Stack } from "@mui/material";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { EmptyState } from "../../../shared/components/feedback/empty-state";
+import { hasAuthToken } from "../api/auth-token-storage";
 import { useAuthMe, isUnauthorized } from "../api/auth-hooks";
 
 export function AuthGuard() {
   const location = useLocation();
   const authQuery = useAuthMe();
+  const isAuthenticatedLocally = hasAuthToken();
+
+  if (!isAuthenticatedLocally) {
+    return <Navigate replace state={{ from: location.pathname }} to="/login" />;
+  }
 
   if (authQuery.isLoading) {
     return (

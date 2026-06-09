@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCurrentUser, login, logout } from "./auth-api";
+import { clearAuthToken, hasAuthToken } from "./auth-token-storage";
 import { HttpClientError } from "../../../shared/api/http-client";
 
 export const authKeys = {
@@ -10,6 +11,7 @@ export function useAuthMe() {
   return useQuery({
     queryKey: authKeys.me,
     queryFn: ({ signal }) => getCurrentUser(signal),
+    enabled: hasAuthToken(),
     retry: false
   });
 }
@@ -25,7 +27,8 @@ export function useLogoutMutation() {
 
   return useMutation({
     mutationFn: logout,
-    onSuccess: () => {
+    onSettled: () => {
+      clearAuthToken();
       queryClient.setQueryData(authKeys.me, null);
       queryClient.removeQueries({ queryKey: authKeys.me });
     }
