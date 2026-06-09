@@ -1,5 +1,6 @@
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Stack } from "@mui/material";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { EmptyState } from "../../../shared/components/feedback/empty-state";
 import { useAuthMe, isUnauthorized } from "../api/auth-hooks";
 
 export function AuthGuard() {
@@ -25,7 +26,25 @@ export function AuthGuard() {
   }
 
   if (authQuery.error) {
-    return <Navigate replace to="/login" />;
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          px: 2
+        }}
+      >
+        <Stack sx={{ width: "100%", maxWidth: 720 }}>
+          <EmptyState
+            actionLabel="Reintentar"
+            description="No hemos podido validar la sesion desde este dispositivo. Revisa que el backend este accesible desde la misma red local y vuelve a intentarlo."
+            onAction={() => window.location.reload()}
+            title="Conexion con la API no disponible"
+          />
+        </Stack>
+      </Box>
+    );
   }
 
   return <Outlet />;

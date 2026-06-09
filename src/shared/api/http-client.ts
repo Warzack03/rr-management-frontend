@@ -57,15 +57,27 @@ export class HttpClientError extends Error {
 }
 
 export async function httpClient<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json; charset=UTF-8"
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    signal: options.signal
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json; charset=UTF-8",
+        Accept: "application/json"
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: options.signal
+    });
+  } catch (error) {
+    const message =
+      error instanceof DOMException && error.name === "AbortError"
+        ? "La peticion ha sido cancelada."
+        : `No se ha podido conectar con la API en ${API_BASE_URL}. Revisa que el backend este accesible desde este dispositivo.`;
+    const wrappedError = new Error(message);
+    (wrappedError as Error & { cause?: unknown }).cause = error;
+    throw wrappedError;
+  }
 
   if (!response.ok) {
     let payload: ApiError | null = null;
@@ -83,5 +95,11 @@ export async function httpClient<T>(path: string, options: RequestOptions = {}):
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    const wrappedError = new Error(`La API ha respondido con un formato no valido para ${path}.`);
+    (wrappedError as Error & { cause?: unknown }).cause = error;
+    throw wrappedError;
+  }
 }
