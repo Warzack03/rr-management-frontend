@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowForwardRounded, VisibilityOffRounded, VisibilityRounded } from "@mui/icons-material";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   alpha,
   Alert,
@@ -20,7 +21,8 @@ import { useForm } from "react-hook-form";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { HttpClientError } from "../../../shared/api/http-client";
-import { useAuthMe, useLoginMutation } from "../api/auth-hooks";
+import { authKeys, useAuthMe, useLoginMutation } from "../api/auth-hooks";
+import { getCurrentUser } from "../api/auth-api";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Introduce tu usuario"),
@@ -33,9 +35,11 @@ export function LoginPage() {
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const authQuery = useAuthMe();
   const loginMutation = useLoginMutation();
   const [showPassword, setShowPassword] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -45,10 +49,21 @@ export function LoginPage() {
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setSessionError(null);
     await loginMutation.mutateAsync(values);
-    navigate((location.state as { from?: string } | undefined)?.from ?? "/dashboard", {
-      replace: true
-    });
+
+    try {
+      const authenticatedUser = await getCurrentUser();
+      queryClient.setQueryData(authKeys.me, authenticatedUser);
+      navigate((location.state as { from?: string } | undefined)?.from ?? "/dashboard", {
+        replace: true
+      });
+    } catch {
+      queryClient.removeQueries({ queryKey: authKeys.me });
+      setSessionError(
+        "Las credenciales son correctas, pero este dispositivo no ha podido mantener la sesion con la API. Revisa la red local y vuelve a intentarlo."
+      );
+    }
   });
 
   if (authQuery.data) {
@@ -56,9 +71,10 @@ export function LoginPage() {
   }
 
   const loginError =
-    loginMutation.error instanceof HttpClientError
+    sessionError ??
+    (loginMutation.error instanceof HttpClientError
       ? loginMutation.error.payload?.message ?? loginMutation.error.message
-      : loginMutation.error?.message;
+      : loginMutation.error?.message);
   const isDarkMode = theme.palette.mode === "dark";
 
   return (

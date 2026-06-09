@@ -15,13 +15,8 @@ export function useAuthMe() {
 }
 
 export function useLoginMutation() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: login,
-    onSuccess: (user) => {
-      queryClient.setQueryData(authKeys.me, user);
-    }
+    mutationFn: login
   });
 }
 
